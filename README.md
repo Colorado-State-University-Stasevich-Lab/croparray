@@ -8,7 +8,7 @@ This module is intended for creating and manipulating an array of crops (or regi
 
 Open the terminal and use [pip](https://pip.pypa.io/en/stable/) for the installation:
 ```bash
-pip install croparrays
+pip install croparray
 ```
 
 ## Usage
