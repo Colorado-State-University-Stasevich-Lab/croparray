@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>croparray: Module Guide &mdash; croparray 0.0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="#" class="icon icon-home"> croparray
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">croparray: Module Guide</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">croparray</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
+      <li>croparray: Module Guide</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-src.track_array_tools">
+<span id="croparray-module-guide"></span><h1>croparray: Module Guide<a class="headerlink" href="#module-src.track_array_tools" title="Permalink to this headline"></a></h1>
+<p>Python code to create, manipulate, and analyze an array of crops from TIF images or videos.
+Created: Summer of 2020
+Authors: Tim Stasevich.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray">
+<em class="property"><span class="pre">class</span> </em><span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">CropArray</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">_arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">_crop_pad</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray" title="Permalink to this definition"></a></dt>
+<dd><p>A class for creating and manipulating an array of crops (or regions of interest) that were generated from a multicolor TIF video. Individual crops from the video are arranged in a two-dimensional numpy array, where the first  dimension corresponds to the the crop number n and the second dimension corresponds to video frame number f in each frame:</p>
+<p>n x f array of crops:</p>
+<blockquote>
+<div><p>—&gt; f frames</p>
+<p>crop_11 crop_12 crop_13 … crop_1f    |
+crop_21 crop_22 crop_23 … crop_2f    | n crops
+crop_21 crop_32 crop_33 … crop_3f    V
+…
+crop_n1 crop_n2 crop_n3 … crop_nf</p>
+</div></blockquote>
+<p>Parameters
+– – – – –
+crop_pad : int</p>
+<blockquote>
+<div><p>Crop_pad defines the lateral (XY) size of each crop. Crops are squares in the XY-plane of length (2*crop_pad + 1) pixels.</p>
+</div></blockquote>
+<dl class="simple">
+<dt>arr<span class="classifier">numpy array</span></dt><dd><dl class="simple">
+<dt>A 4D numpy array containing the intensity values for a crop array TIF generated from a multicolor 3D TIF video. Dimensions of the crop array TIF are (dimension can be of length 1):</dt><dd><ol class="arabic simple">
+<li><p>z (axial Z-dimension)</p></li>
+<li><p>n (number of crops tracked per frame) x crop_dim</p></li>
+<li><p>f (frame number) x crop_dim</p></li>
+<li><p>c (channel or color)</p></li>
+</ol>
+</dd>
+</dl>
+</dd>
+<dt>df<span class="classifier">pandas dataframe</span></dt><dd><p>A pandas dataframe containing the coordinates of each crop in the crop array. The dataframe has 4 columns = [id, f, y, x]:
+1. id is the id # of each crop (integer)
+2. f is the frame # of each crop (integer)
+3. y is the Y-position of each crop center (float)
+4. x is the X-position of each crop center (float)</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.array_to_crops">
+<span class="sig-name descname"><span class="pre">array_to_crops</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.array_to_crops" title="Permalink to this definition"></a></dt>
+<dd><p>Returns indexable N,T,Z,Y,X,C dimensional crops from crop array with individual crops in array having dimensions crop_dim x crop_dim x Z.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.background_in_mask">
+<span class="sig-name descname"><span class="pre">background_in_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crop</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.background_in_mask" title="Permalink to this definition"></a></dt>
+<dd><p>Returns mean intensity within mask region of the inputted crop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.best_z">
+<span class="sig-name descname"><span class="pre">best_z</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crop</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.best_z" title="Permalink to this definition"></a></dt>
+<dd><p>Returns crop Z plane with the max average intensity in a central 3x3 square after applying a bandpass filter. bandpass_cutoffs = [min, max] is an optional argument for the bandpass filter (default = [1,7]).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.best_z_mask">
+<span class="sig-name descname"><span class="pre">best_z_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_ch</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.best_z_mask" title="Permalink to this definition"></a></dt>
+<dd><p>Using image in ref_ch, returns mask for crop array with best z +/- rz = 1, else 0.
+z-offset = [z_offset_ch0, z_offset_ch1, …] is an optional integer list to correct for offsets in z.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.binned_array">
+<span class="sig-name descname"><span class="pre">binned_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dts</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_decimals</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.binned_array" title="Permalink to this definition"></a></dt>
+<dd><p>Bins columns in a crop array so that rows so they correspond to the same time (within n_decimals). This is useful when different rows were acquired at a different frame rate. Input: (1) crop array to correct; (2) dts is a list of the times between frames, e.g. [100, 100, …], where 100 would  correspond to time between columns in 1st row, 88 between columns in second row, …; (2) n_decimals = (…-2, -1, 0, 1, 2, …) correponds to the number of decimals to consider two times equivalent, e.g. -2 would consider t = 123 and t = 100 to both be t = 100. If a row has more than one column element that corresponds to the same time, all but one of the equivalent columns will be eliminated.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.capsule_mask">
+<span class="sig-name descname"><span class="pre">capsule_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">th</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_ch</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.capsule_mask" title="Permalink to this definition"></a></dt>
+<dd><p>Returns mask from reference channel ref_ch for crop array with single-pixel width capsule shell of dimensions rx, ry, and rz, thickness th, and centered on best z +/- rz = 1, else 0. nz-offset is an optional argument that is an integer list of form (z_offset_ch0, z_offset_ch1, …)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.cigar_mask">
+<span class="sig-name descname"><span class="pre">cigar_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_ch</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.cigar_mask" title="Permalink to this definition"></a></dt>
+<dd><p>Returns mask from reference channel ref_ch for crop array with cigars of dimension rx, ry, and rz centered on best z = 1, else 0. nz-offset is an optional argument that is an integer list of form (z_offset_ch0, z_offset_ch1, …)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.coords">
+<span class="sig-name descname"><span class="pre">coords</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.coords" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a pandas dataframe containing the ID and coordinates of each crop in the crop array. The dataframe has 4 columns = [id, f, y, x]:
+1. id is the ID # of each crop (integer)
+2. f is the frame # of each crop (integer)
+3. y is the Y-position of each crop center (float)
+4. x is the X-position of each crop center (float)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.crop_ID_markers">
+<span class="sig-name descname"><span class="pre">crop_ID_markers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.crop_ID_markers" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a dataframe whose values can be used to label N x T crop arrays in Napari</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.crop_IDs">
+<span class="sig-name descname"><span class="pre">crop_IDs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.crop_IDs" title="Permalink to this definition"></a></dt>
+<dd><p>Returns all the unique crop IDs in the crop array</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.crop_dim">
+<span class="sig-name descname"><span class="pre">crop_dim</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.crop_dim" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the lateral (XY) size of each crop: 2*crop_pad + 1. Note all crops in the crop array are squares in the XY-plane of length (2*crop_pad + 1) pixels.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.crops">
+<span class="sig-name descname"><span class="pre">crops</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.crops" title="Permalink to this definition"></a></dt>
+<dd><p>Returns indexable N x T crops from crop array.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.crops_to_array">
+<span class="sig-name descname"><span class="pre">crops_to_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crops</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.crops_to_array" title="Permalink to this definition"></a></dt>
+<dd><p>Returns indexable N x T crops from crop array.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.crops_to_array_NxZ">
+<span class="sig-name descname"><span class="pre">crops_to_array_NxZ</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crops</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.crops_to_array_NxZ" title="Permalink to this definition"></a></dt>
+<dd><p>Converts indexable N x T crops/mask to crops/mask array with dimensions (N x crop_pad) x Z</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.cylinder_mask">
+<span class="sig-name descname"><span class="pre">cylinder_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ref_ch</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.cylinder_mask" title="Permalink to this definition"></a></dt>
+<dd><p>Returns mask from reference channel ref_ch for crop array with single-pixel width capsule shell of dimension rx, ry, and rz centered on best z = 1, else 0. nz-offset is an optional argument that is an integer list of form (z_offset_ch0, z_offset_ch1, …)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.data">
+<span class="sig-name descname"><span class="pre">data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.data" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a 4D numpy array of dimensions corresponding to intensity data in the n x f crop array tif file:
+1. z (axial Z-dimension)
+2. n (number of crops tracked per frame) x crop_dim
+3. f (frame number) x crop_dim
+4. c (channel or color)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.disk_mask_2D">
+<span class="sig-name descname"><span class="pre">disk_mask_2D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.disk_mask_2D" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a 2D mask array with disks of radius r in each crop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.donut_mask_2D">
+<span class="sig-name descname"><span class="pre">donut_mask_2D</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">r</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">th</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.donut_mask_2D" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a 2D mask array with donuts of radius r and thickness th in each crop.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.find_intensity_runs">
+<span class="sig-name descname"><span class="pre">find_intensity_runs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col_name</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.find_intensity_runs" title="Permalink to this definition"></a></dt>
+<dd><p>Finds intensity runs in crop array. Inputs: (1) df is a intensity measurement dataframe,  e.g. output from measure_intensity_in_mask_df function; (2) col_name is a string that specifies the column name in df in which to search for runs, e.g. ‘Int. Ch. 1 (a.u.)’; (3) th (default 0) is an optional argument that specifies the intensity threshhold for finding runs. Runs will correspond to a series of repeated intensity measurments above the threshhold value; (4) gap = n (default 0) is an optional argument specifying the largest # of frames in a gap between runs. Sequential runs that are separated by n frames or fewer will be merged into a single run; (5) expt (default 0) is an optional string or number specifying the experiment corresponding to dataframe.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.find_translating_spots">
+<span class="sig-name descname"><span class="pre">find_translating_spots</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">intensities</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">int_threshhold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">run_length</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.find_translating_spots" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a list of track_ids in which translation above a threshhold intensity and
+lasting longer than run_length is detected in intensity timeseries</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.int_in_mask">
+<span class="sig-name descname"><span class="pre">int_in_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.int_in_mask" title="Permalink to this definition"></a></dt>
+<dd><p>Returns an array of mean intensities in arr within the mask. mask and arr should be 3D (NTZYXC) crop arrays or 2D (NTYXC) crop array. Optional argument is ignore_val (default 0), which is an intensity value in the mask that will be ignored when computing means.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.int_range">
+<span class="sig-name descname"><span class="pre">int_range</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sdleft</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sdright</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.int_range" title="Permalink to this definition"></a></dt>
+<dd><p>Returns an intensity range list for the inputted crop array arr for visualization.
+Intensity range is median - sdleft*standard deviation :  median + sdright*standard deviation</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.int_renorm_by_col">
+<span class="sig-name descname"><span class="pre">int_renorm_by_col</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_sd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.int_renorm_by_col" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a crop array in which the intensity in each column is renormlized such that an intensity that is n
+standard deviations beyond the median is set equal to top_int (keeping zero unchanged).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.int_renorm_by_row">
+<span class="sig-name descname"><span class="pre">int_renorm_by_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_sd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.int_renorm_by_row" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a crop array in which the intensity in each row is renormlized such that an intensity that is n
+standard deviations beyond the median is set equal to top_int (keeping zero unchanged).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.local_background_subtract">
+<span class="sig-name descname"><span class="pre">local_background_subtract</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crop_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_array</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.local_background_subtract" title="Permalink to this definition"></a></dt>
+<dd><p>Returns crops after subtracting the background signal measured in masks)</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.make_run_layer">
+<span class="sig-name descname"><span class="pre">make_run_layer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_df</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.make_run_layer" title="Permalink to this definition"></a></dt>
+<dd><p>Highlights regions of crop array that correspond to runs annotated in run_df (which is a dataframe that is the output
+of the find_intensity_runs command. ch (default 0) is an optional argument taht specifies the channel the layer corresponds
+to.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.mask_projection">
+<span class="sig-name descname"><span class="pre">mask_projection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crop_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_array</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.mask_projection" title="Permalink to this definition"></a></dt>
+<dd><p>Performs max-z projection after applying mask_array to inputted crop_array</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.measure_intensity_in_mask_df">
+<span class="sig-name descname"><span class="pre">measure_intensity_in_mask_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.measure_intensity_in_mask_df" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a dataframe with intensities measured in mask for crop array arr. Optional arguments: (1) renorm_frames = [0,1] (default) is the range of frames to use when renormalizing intensity to; (2) start_frame = 0 (default) is used to measure time such that start_frame corresponds to t=0; (3) dt = 1 (default) is the time between frames in minutes; (4) file = 0 (default) # or string corresponding to file in a filelist the crop array belongs to; (5) replicate = 0 (default) # or string corresponding to the replicate number of the file in the crop array list; (6) exp = 0 (defaul) # or string corresponding to the type of experiment (eg. control would have different number);(7) ch_names = list of channels names (default: ‘Int. Ch. 1 (a.u.)’…); (8) k_pb is a list of exponents for each channel that describe photobleaching in the experiment. If inputted, measured intensities for each channel I_measure are corrected such that I = I_measure/exp(-k_pb). The default values is k_pb = [0, 0, …] (list of length n_channels), so no correction is performed for each channel. (9) ignore_val (default 0), which is an intensity value in the mask that will be ignored when computing means. (10) bg_frames = [0,0] (default) defines a range of frames that defines the background level for the HT curve. This background will be subtracted so HT curve goes to zero. Note the default does nothing by subtracting 0.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.moving_avg">
+<span class="sig-name descname"><span class="pre">moving_avg</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">crop_array</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.moving_avg" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a n-frame moving average of the orginal crop_array. Final frames for which the moving average cannot be computed are set to zero.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.n_channels">
+<span class="sig-name descname"><span class="pre">n_channels</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.n_channels" title="Permalink to this definition"></a></dt>
+<dd><p>Returns number of color channels in the crop array</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.n_crops">
+<span class="sig-name descname"><span class="pre">n_crops</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.n_crops" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the maximum number of crops per frame or timepoint in the crop array</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.n_frames">
+<span class="sig-name descname"><span class="pre">n_frames</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.n_frames" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the number of frames F in the N x F crop array</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.plot_array">
+<span class="sig-name descname"><span class="pre">plot_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.plot_array" title="Permalink to this definition"></a></dt>
+<dd><p>Plots a crop array that represents the average row of arr. Optional arguments: (1) xlim = [start, stop] is a list that specifies the what frame to start and stop; (2) dx is the frame step size; (3) fig_size is a tuple that specifies the dimensions of the output image, e.g. (3.5,1); (4) int_range is a list of pairs that specify intensity limits, e.g. for a 2-channel image int_range = [[0,1000],[0,1000]]; (5) out_file is the name of the output .png output file to which image is saved.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.plot_array_avg_row">
+<span class="sig-name descname"><span class="pre">plot_array_avg_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.plot_array_avg_row" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a max-z projected single row crop array that represents the average row of arr. Optional arguments: (1) xlim = [start,stop] is a list that specifies the what frame to start and stop; (2) dx is the frame step size; (3) fig_size is a tuple that specifies the dimensions of the output image, e.g. (3.5,1); (4) int_range is a list of pairs that specify intensity limits, e.g. for a 2-channel image int_range = [[0,1000],[0,1000]]; (5) out_file is the name of the output .png output file to which image is saved; (6) ignore_val is the intensity value to ignore in the average (default 0).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.plot_array_row">
+<span class="sig-name descname"><span class="pre">plot_array_row</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_row</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.plot_array_row" title="Permalink to this definition"></a></dt>
+<dd><p>Plots a single row from a crop array that represents the average row of arr. Optional arguments: (1) xlim = [start, stop] is a list that specifies the what frame to start and stop; (2) dx is the frame step size; (3) fig_size is a tuple that specifies the dimensions of the output image, e.g. (3.5,1); (4) int_range is a list of pairs that specify intensity limits, e.g. for a 2-channel image int_range = [[0,1000],[0,1000]]; (5) out_file is the name of the output .png output file to which image is saved. !!! Need to do max projection!</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.to_color_mask">
+<span class="sig-name descname"><span class="pre">to_color_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">masks</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.to_color_mask" title="Permalink to this definition"></a></dt>
+<dd><p>Adds n_channels to mask to make a color version</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="src.track_array_tools.CropArray.z_slices">
+<span class="sig-name descname"><span class="pre">z_slices</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.CropArray.z_slices" title="Permalink to this definition"></a></dt>
+<dd><p>Returns the Z dimension in pixels of 3D crops in crop array</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.concat_crop_array_vids">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">concat_crop_array_vids</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ca_vids</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.concat_crop_array_vids" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a single, large crop array video made up from a vertical stack of the inputted crop array videos
+ca_vids = [ca_vid1, ca_vid2, …]. ca_vids should all have the same crop_pad size and number of dimensions
+(either 3D+color = ZYXC or 2D+color = YXC).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.create_particle_array_video">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">create_particle_array_video</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">video_3D</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">particles</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crop_pad</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xy_pixel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_pixel_size</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.create_particle_array_video" title="Permalink to this definition"></a></dt>
+<dd><p>Creates and saves a particle array video at output_direction/output_filename from a
+3D tif video (video_3D) and corresponding particle array dataframe (particles). crop_pad is
+the effective radius of crops in the generated particle array. xy_pixel_size and z_pixel_size
+are included to generate an imagej tif file with metadata containing the resolution of
+the image. An optional argument, homography, is a homography matrix that shifts red
+(channel 0) pixels so they align with other channels. This will correct for shifts in red
+and green channels.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.create_track_array_video">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">create_track_array_video</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_filename</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">video_3D</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracks</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crop_pad</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">xy_pixel_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">z_pixel_size</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.create_track_array_video" title="Permalink to this definition"></a></dt>
+<dd><p>Creates and saves a crop array video at output_direction/output_filename from a 3D tif video (video_3D) and corresponding track dataframe (tracks). crop_pad is the effective radius of crops in the generated crop array. xy_pixel_size and z_pixel_size are included to generate an imagej tif file with metadata containing the resolution of the image. Optional arguments: (1) track_ch is the channel used for tracking, 0 = red, 1 = green, 2 = blue; default is 0 (red) (2) homography is a homography matrix that shifts the track_ch pixels so they align with other channels. This will correct for shifts in red and green channels.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.find_duplicates">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">find_duplicates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mylist</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.find_duplicates" title="Permalink to this definition"></a></dt>
+<dd><p>Find positions of duplicates in mylist that can be deleted.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.flatten">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">flatten</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.flatten" title="Permalink to this definition"></a></dt>
+<dd><p>Flatten out a list.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.int_renorm">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">int_renorm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.int_renorm" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a renormalized array in which the intensity bin corresponding to n standard deviations beyond mean
+is equal to top_int (keeping zero unchanged):</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.list_correlate">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">list_correlate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sig1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sig2</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.list_correlate" title="Permalink to this definition"></a></dt>
+<dd><p>This calculates the correlation between two equal-length, 1D signals sig1 and sig2 based on Coulon et al, Methods Enzymology: <a class="reference external" href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6300985/pdf/nihms-1000605.pdf">https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6300985/pdf/nihms-1000605.pdf</a>. Optional arguments: (1) mean1 is the global mean of sig1 (default mean1 = np.mean(sig1)); (2) mean2 is the global mean of sig2 (default mean2 = np.mean(sig2)).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.merge_runs">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">merge_runs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gap</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.merge_runs" title="Permalink to this definition"></a></dt>
+<dd><p>Merge runs (or intervals: […[start1,stop1], [start2, stop2], …]) that are seperated
+by gap or less (e.g. if start2 - stop1 &lt;= gap merged interval is [start1, stop2]).</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.my_capsule">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">my_capsule</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeZ</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">th</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.my_capsule" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a capsule mask centered at (cx,cy,cz) of thickness (rx+1:rx+2,ry+1:ry+1,rz+1:rz+2) in volumeX x volumeY x volumeZ</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.my_cigar">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">my_cigar</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeZ</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.my_cigar" title="Permalink to this definition"></a></dt>
+<dd><p>Creates an ellipsoid mask centered at (cx,cy,cz) with radii (rx,ry,rz) in volumeX x volumeY x volumeZ</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.my_cuboid">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">my_cuboid</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeZ</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.my_cuboid" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a cube mask centered at (cx,cy,cz) with radii (rx,ry,rz) in volumeX x volumeY x volumeZ</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.my_cylinder">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">my_cylinder</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rz</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumeZ</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.my_cylinder" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a cylindrical mask centered at (cx,cy,cz) with radii (rx,ry) and height 2*rz+1 in volumeX x volumeY x volumeZ</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.napari_viewer">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">napari_viewer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spatial_scale</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.napari_viewer" title="Permalink to this definition"></a></dt>
+<dd><p>View crop array w/ napari. Spatial scale must be set. Optional: layer (e.g. mask), markers (e.g. dataframe), and range</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.run_lengths">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">run_lengths</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">run_interval_list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.run_lengths" title="Permalink to this definition"></a></dt>
+<dd><p>Returns length of runs in run_interval_list = [[start1,stop1], [start2,stop2],…] –&gt;
+[stop1-start2, stop2-start2, …]</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.runs_above_threshhold">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">runs_above_threshhold</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">th</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.runs_above_threshhold" title="Permalink to this definition"></a></dt>
+<dd><p>Returns a new list with 0 for elements in list above threshold and -1 otherwise.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="src.track_array_tools.zero_runs">
+<span class="sig-prename descclassname"><span class="pre">src.track_array_tools.</span></span><span class="sig-name descname"><span class="pre">zero_runs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">list</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.track_array_tools.zero_runs" title="Permalink to this definition"></a></dt>
+<dd><p>Returns intervals of zero_runs. Eg. list = [0,0,1,1,4,0,0,0] –&gt; [[0,2],[5,8]]</p>
+</dd></dl>
+
+<div class="toctree-wrapper compound">
+</div>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Tim Stasevich.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
