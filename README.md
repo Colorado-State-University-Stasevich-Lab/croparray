@@ -4,7 +4,7 @@ Authors: Tim Stasevich.
 ## Description
 This module is intended for creating and manipulating an array of crops (or regions of interest) that were generated from a multicolor TIF video obtained from single-molecule microscopy.
 
-<img src= https://github.com/Colorado-State-University-Stasevich-Lab/croparray/raw/main/docs/images/Fig1-CropArrayConceptV2.png alt="drawing" width="1200"/>
+<img src= https://github.com/Colorado-State-University-Stasevich-Lab/croparray/raw/main/docs/images/Fig1-CropArrayConceptV2.png alt="drawing" width="600"/>
 
 ## Installation
 
