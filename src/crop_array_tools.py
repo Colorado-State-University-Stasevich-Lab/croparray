@@ -26,7 +26,7 @@ def create_crop_array(video, df, **kwargs):
     Parameters
     ----------
     video: numpy array
-        A 7D numpy array with intensity information from a tif video. The dimensions of the numpy array must be ordered (fov, f, z, y, x, ch), where fov = field of view, f = frame, z = axial z-coordinate, y = lateral y-coordinate, x = lateral x-coordinate, and ch = channels. Note any dimension can have length one (eg. single fov videos would have an fov dimension of length one or a single channel video would have a ch dimension of length one).  
+        A 6D numpy array with intensity information from a tif video. The dimensions of the numpy array must be ordered (fov, f, z, y, x, ch), where fov = field of view, f = frame, z = axial z-coordinate, y = lateral y-coordinate, x = lateral x-coordinate, and ch = channels. Note any dimension can have length one (eg. single fov videos would have an fov dimension of length one or a single channel video would have a ch dimension of length one).  
     df: pandas dataframe
         A dataframe with the ids and coordinates of selected spots for making crops from video. Minimally, the dataframe must have 5 columns (1) 'fov': the fov number for each spot; can also be a filename for each fov. (2) 'id': the integer id of each spot. (3) 'f': integer frame number of each spot. (4) 'yc': the lateral y-coordinate of the spot for centering the crop in y, (5) 'xc': the lateral x-coodinate of the spot for centering the crop in x. Any additional columns must be numeric and will be automatically converted to individual x-arrays in the crop array dataset that have the column header as a name.
     xy_pad: int, optional
@@ -150,7 +150,7 @@ def create_crop_array(video, df, **kwargs):
             # use the homography to correct channels 1 and 2 (assumed channel 0 is red channel)        
             for ch in np.arange(n_channels):
                 if ch == 0:  # don't correct channel 0
-                    my_x[ch] = (my_spots['xc'] + xy_pad + 1).round(0).values.astype(int)
+                    my_x[ch] = (my_spots['xc'] + xy_pad + 1).round(0).values.astype(np.int16)
                     my_y[ch] = (my_spots['yc'] + xy_pad + 1).round(0).values.astype(int)
                 else:   # correct other channels using same homography (since green/blue are image on same camera)
                     temp = [list(np.dot(homography,np.array([pos[0],pos[1],1]))[0:2]) 
