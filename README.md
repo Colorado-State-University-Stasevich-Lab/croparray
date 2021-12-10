@@ -16,19 +16,11 @@ This module is intended for creating and manipulating an array of crops (or regi
     source activate croparray_env
 ```
 
-* To include the rest of requirements use:
+* To install the rest of requirements use:
 ```
     pip install -r requirements.txt
 ```
-Additional steps to deactivate or remove the environment from the computer:
-* To deactivate the environment use
-```
-    conda deactivate
-```
-* To remove the environment use:
-```
-    conda env remove -n FISH_processing
-```
+
 
 ## Installation using PIP
 
@@ -43,6 +35,28 @@ Additional steps to deactivate or remove the environment from the computer:
 ```bash
 pip install croparray
 ```
+
+## Deactivating and removing the environment
+
+* To deactivate or remove the environment from your computer use:
+```bash
+    conda deactivate
+```
+* To remove the environment use:
+```bash
+    conda env remove -n croparray_env
+```
+* To unistall croparray use
+```bash
+    pip uninstall croparray
+```
+
+## additional troubleshooting information
+* If you cannot see the package installed on your computer, try using ```pip3```. For example: 
+```bash
+pip3 install croparray
+```
+
 
 ## Usage
 
