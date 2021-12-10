@@ -10,6 +10,11 @@ This module is intended for creating and manipulating an array of crops (or regi
 
 * Install [anaconda](https://anaconda.org).
 
+* Clone the Github repository
+```bash
+    git clone https://github.com/Colorado-State-University-Stasevich-Lab/croparray.git
+```
+
 * To create a virtual environment navigate to your local repository and use:
 ```bash
     conda create -n croparray_env python=3.8 -y
