@@ -1,5 +1,7 @@
-include README
+include README.md
 include LICENSE
-recursive-include src
-recursive-ignore tests
-recursive-ignore docs
+prune docs 
+prune notebooks 
+prune database
+prune __pycache__
+exclude .gitignore

@@ -16,10 +16,11 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     license = "BSD 3-Clause License",
-    keywords = "single-molecule image processing",
+    keywords = "Single-molecule image processing",
     url = "https://github.com/Colorado-State-University-Stasevich-Lab/croparray",
-    package_dir ={'':'croparray'},
-    packages=find_packages(where="src"),
+    package_dir = {'croparray':'src'},
+    packages=find_packages(exclude=['docs','database','notebooks','__pycache__','.gitignore']),
+    include_package_data=True,
     install_requires=requirements,
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
@@ -29,4 +30,4 @@ setup(
         "Programming Language :: Python :: 3.8"
     ],
     python_requires='>=3.7'
-)
+    )
