@@ -6,14 +6,46 @@ This module is intended for creating and manipulating an array of crops (or regi
 4
 <img src= https://github.com/Colorado-State-University-Stasevich-Lab/croparray/raw/main/docs/images/Fig1-CropArrayConceptV4.png alt="drawing" width="600"/>
 
-## Installation
+## Installation from Github repository
 
-Open the terminal and use [pip](https://pip.pypa.io/en/stable/) for the installation:
+* Install [anaconda](https://anaconda.org).
+
+* To create a virtual environment navigate to your local repository and use:
+```bash
+    conda create -n croparray_env python=3.8 -y
+    source activate croparray_env
+```
+
+* To include the rest of requirements use:
+```
+    pip install -r requirements.txt
+```
+Additional steps to deactivate or remove the environment from the computer:
+* To deactivate the environment use
+```
+    conda deactivate
+```
+* To remove the environment use:
+```
+    conda env remove -n FISH_processing
+```
+
+## Installation using PIP
+
+* To create a virtual environment using:
+
+```bash
+    conda create -n croparray_env python=3.8 -y
+    source activate croparray_env
+```
+
+* Open the terminal and use [pip](https://pip.pypa.io/en/stable/) for the installation:
 ```bash
 pip install croparray
 ```
 
 ## Usage
+
 * Organizes crops and measurements of spots of interest from tif images in a convenient x-array format for reduced filesize and more open and reproducible analyses.
 * Visualizes crops of detected spots from super-resolution microscope images.
 * Calculates the best maximum projection for each crop containing a detected spot.
@@ -24,7 +56,6 @@ pip install croparray
 
 
 ## Licenses for dependencies
-- License for [Napari](https://github.com/napari/napari): BSD-3-Clause.
+- License for [Napari](https://github.com/napari/napari): BSD-3-Clause License. Copyright (c) 2018, Napari. All rights reserved.
 
-- License for [xarray](https://github.com/pydata/xarray): Copyright 2014-2019, xarray Developers
-
+- License for [xarray](https://github.com/pydata/xarray): Apache License. Version 2.0, January 2004. Copyright 2014-2019, xarray Developers
