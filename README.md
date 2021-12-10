@@ -6,7 +6,15 @@ This module is intended for creating and manipulating an array of crops (or regi
 
 <img src= https://github.com/Colorado-State-University-Stasevich-Lab/croparray/raw/main/docs/images/Fig1-CropArrayConceptV4.png alt="drawing" width="600"/>
 
-## Installation from Github repository
+
+## Documentation 
+* Documentation is accessible via [croparray.readthedocs](https://croparray.readthedocs.io) 
+
+## Colab implementation
+
+ * Implementation in Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]( https://colab.research.google.com/drive/1Ru-_ak9PpW9bGM_H9SlffmdDQOxG16-4?usp=sharing)
+
+## Local installation from the Github repository
 
 * Install [anaconda](https://anaconda.org).
 
@@ -26,8 +34,7 @@ This module is intended for creating and manipulating an array of crops (or regi
     pip install -r requirements.txt
 ```
 
-
-## Installation using PIP
+## Local installation using PIP
 
 * To create a virtual environment using:
 
@@ -59,7 +66,7 @@ pip install croparray
 ## additional troubleshooting information
 * If you cannot see the package installed on your computer, try using ```pip3```. For example: 
 ```bash
-pip3 install croparray
+    pip3 install croparray
 ```
 
 

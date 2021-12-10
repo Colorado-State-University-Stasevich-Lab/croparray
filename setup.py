@@ -9,7 +9,7 @@ with open("requirements.txt", encoding='utf-8') as f:
 
 setup(
     name = "croparray",
-    version = "0.0.1",
+    version = "0.0.3",
     author = "Tim Stasevich",
     author_email = "Tim.Stasevich@colostate.edu",
     description = ("Python module for for creating and manipulating an array of crops (or regions of interest) from images obtained using single-molecule microscopy."),

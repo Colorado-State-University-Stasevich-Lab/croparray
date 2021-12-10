@@ -1,10 +1,10 @@
 croparray: Module Guide
 ===================================
-.. image:: images/ Fig1-CropArrayConceptV2.png
+.. image:: images/ Fig1-CropArrayConceptV4.png
     :width: 600
     :alt: croparray
 
-.. automodule:: src.track_array_tools
+.. automodule:: src.crop_array_tools
     :members:
     
 .. toctree::
