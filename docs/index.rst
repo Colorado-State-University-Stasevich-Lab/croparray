@@ -4,7 +4,7 @@ croparray: Module Guide
     :width: 600
     :alt: croparray
 
-.. automodule:: src.crop_array_tools
+.. automodule:: croparray.crop_array_tools
     :members:
     
 .. toctree::

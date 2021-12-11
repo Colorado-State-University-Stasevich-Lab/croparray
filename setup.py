@@ -9,7 +9,7 @@ with open("requirements.txt", encoding='utf-8') as f:
 
 setup(
     name = "croparray",
-    version = "0.0.3",
+    version = "0.0.8",
     author = "Tim Stasevich",
     author_email = "Tim.Stasevich@colostate.edu",
     description = ("Python module for for creating and manipulating an array of crops (or regions of interest) from images obtained using single-molecule microscopy."),
@@ -18,7 +18,7 @@ setup(
     license = "BSD 3-Clause License",
     keywords = "Single-molecule image processing",
     url = "https://github.com/Colorado-State-University-Stasevich-Lab/croparray",
-    package_dir = {'croparray':'src'},
+    package_dir = {'croparray':'croparray'},
     packages=find_packages(exclude=['docs','database','notebooks','__pycache__','.gitignore']),
     include_package_data=True,
     install_requires=requirements,

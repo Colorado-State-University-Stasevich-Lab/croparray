@@ -3,3 +3,6 @@ database
 __pycache__
 *__pycache__
 *.egg-info
+build
+dist
+croparray.egg-info
