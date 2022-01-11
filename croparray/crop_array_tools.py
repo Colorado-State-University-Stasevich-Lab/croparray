@@ -208,3 +208,83 @@ def create_crop_array(video, df, **kwargs):
     )
 
     return ds
+
+def best_z_proj(ca, **kwargs):
+    '''
+    Returns an x-array that holds the best-z projection of intensities of spots in a reference channel.
+
+    Parameters
+    ----------
+    ca: crop arrray (x-array dataset)
+        A crop array.
+    ref_ch: int, optional 
+        A reference intensity channel for finding the best-z projection. Default: ref_ch = 0
+    disk_r: int, optional
+        The radius of the disk (in pixels) to make measurements to determine the best-z slice. Default: disk_r = 2
+    roll_num: int, optional
+        The number of z-slices to use in the rolling-z max projection for determining the best-z slice. min_periods in the da.rolling() function is set to 1 so there will be no Nans at the z-edges of crops. Default: roll_num = 1.
+
+    Returns
+    ------- 
+    A 'best-z' x-array with dimensions (fov,n,t,y,x,ch). The best-z x-array contains the intensities of each crop in the 'best' z-slice, where 'best' is defined as the slice having the maximal intensity within a centered xy disk of radius disk_r pixels. A rolling-z maximum projection (over roll_n z-slices) can optionally be performed so best-z represents a max-z projection across multiple z-slices.
+    
+    '''
+    # Get the optional key word arguments (kwargs):
+    ref_ch = kwargs.get('ref_ch', 0)
+    disk_r = kwargs.get('disk_r', 2) 
+    roll_n = kwargs.get('roll_n', 1)
+
+    res = ca.dx # resolution for defining disk to make measurements to determine best-z
+
+    # Get z-signals in disk within each z-plane and apply rolling z-average of these signals
+    z_sig = ca.sel(ch=ref_ch).int.where(lambda a: a.x**2 + a.y**2 <= (disk_r*res)**2).mean(dim=['x','y']).rolling(z=roll_n, center=True, min_periods=1).max()
+
+    # Choose z-plane in ca.int corresponding to max z-signal for each channel, then concatenate x-arrays with coordinate channels
+    return xr.concat([ca.int.sel(ch=i).rolling(z=roll_n,center=True,min_periods=1).max().isel(z_sig.argmax(dim=['z'])) for i in ca.ch], dim='ch')
+
+def montage(ca, **kwargs):
+    '''
+    Returns a montage of a crop array for easier visualizaton.
+
+    Parameters
+    ----------
+    ca: crop arrray (x-array dataset)
+        A crop array.
+    col: string (optional) 
+        String specifying crop array coordinate to arrange in columns, either 'fov', 'n', or 't' (default). 
+    row: string (optional) 
+        String specifying crop array coordinate to arrange in rows, either 'fov', 'n' (default), or 't'. 
+
+    Returns
+    -------
+    A reshaped crop array in which individual crops are arranged in a two-dimensional array of dimensions row x col. If kwarg coordinates for row and col are the same, a two dimensional array of dimensions sqrt(row) x sqrt(row) is returned.   
+    '''
+    # Get the optional key word arguments (kwargs):
+    col = kwargs.get('col', 't')
+    row = kwargs.get('row', 'n') 
+
+    if row != col: # arrange crops in rows and columns in the xy plane 
+        output = ca.stack(r=(row,'y'),c=(col,'x')).transpose('id','fov','n','t','z','r','c','ch', missing_dims='ignore') 
+
+    if row == col:  # arrange crops in square col x col montage in the xy-plane
+        col_length = len(ca.coords.get(col))
+        my_sqrt = np.sqrt(col_length) # How big a square do we need to make?
+        remainder = my_sqrt % 1
+        if remainder == 0: 
+            my_size = int(my_sqrt) # montage square will be (my_size x my_size)
+        else:
+            my_size = int(np.floor(my_sqrt) + 1) # montage square will be (my_size + 1) x (my_size + 1)
+        # pad w/ 0 so there are enough crops to fill a perfect my_size x my_size square
+        pad_amount = my_size*my_size - col_length
+        # Reshape dataset so 'col' coordinates is rearranged into a perfect square.
+        # See https://stackoverflow.com/questions/59504320/how-do-i-subdivide-refine-a-dimension-in-an-xarray-dataset/59685729#59685729 for details
+        output = ca.pad(pad_width={col:(0,pad_amount)}, mode='constant', constant_values = 0  # !!! Careful, ds.pad may change in future x-array
+        ).assign_coords(montage_row = np.arange(my_size), montage_col = np.arange(my_size)
+        ).stack(montage = ('montage_row', 'montage_col') # make montage_row x montage_col stacked coordinates
+        ).reset_index(col, drop=True  # remove 'col' coordinate, but keep in individual x-arrays in dataset
+        ).rename({col:'montage'}  # rename 'col' dimension in x-arrays to 'montage'
+        ).unstack(                # unstack the montage_row and montage_col coordinates    
+        ).stack(r=('montage_row','y'), c=('montage_col','x')  # Arrange crops in c x r square in xy-plane
+        ).transpose('id','fov','n','t','z','r','c','ch',missing_dims='ignore') # Ensure standard crop array ordering
+
+    return output
