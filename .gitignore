@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 database
 .DS_Store
 __pycache__
@@ -7,7 +6,3 @@ __pycache__
 build
 dist
 croparray.egg-info
-=======
-#database
-.DS_Store
->>>>>>> Stashed changes
