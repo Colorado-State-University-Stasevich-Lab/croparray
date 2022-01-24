@@ -3,7 +3,7 @@
 '''
 Python code to create, manipulate, and analyze an array of crops from TIF images or videos.
 Created: Summer of 2020
-Authors: Tim Stasevich.
+Authors: Tim Stasevich & Luis Aguilera.
 '''
 
 # Conventions.
@@ -18,7 +18,6 @@ if import_libraries == 1:
     import xarray as xr
 
 ##### Modules
-
 def create_crop_array(video, df, **kwargs): 
     """
     Creates a crop x-array from a tif video and a dataframe containing the ids and coordinates of spots of interest. Cropping is only performed in the lateral xy-plane (so each crop has all z-slices in the video). Padding in the xy-plane by zeros is added to create crops for spots that are too close to the edge of the video. 
@@ -59,23 +58,23 @@ def create_crop_array(video, df, **kwargs):
         ch = [0, 1, ... n_channels]
     Attributes of dataset: filename, date
     X-arrays in dataset:
-    1. ca.int -- coords: (fov, n, t, z, y, x ch); attributes: 'units'; uint16
+    1. ca.int -- dims: (fov, n, t, z, y, x ch); attributes: 'units'; uint16
         An X-array containing the intensities of all crops in the crop array.
-    2. ca.id -- coords: (fov, n, t); attributes: 'units'; uint16
+    2. ca.id -- dims: (fov, n, t); attributes: 'units'; uint16
         An x-array containing the ids of the crops in the video.
-    3. ca.yc -- coords: (fov, n, t, ch); attributes: 'units'; uint16
+    3. ca.yc -- dims: (fov, n, t, ch); attributes: 'units'; uint16
         An x-array containing the yc coordinates of the crops in the video.
-    4. ca.xc -- coords: (fov, n, t, ch); attributes: 'units'; uint16
+    4. ca.xc -- dims: (fov, n, t, ch); attributes: 'units'; uint16
         An x-array containing the zc coordinates of the crops in the video.
-    5. ca.xy_pad -- coords: (fov, n, t, ch); attributes: 'units'; uint16
+    5. ca.xy_pad -- dims: (); attributes: 'units'; uint16
         A 1D array containing xy-pad. 
-    6. ca.dt -- coords: (fov, n, t, ch); attributes: 'units'; float
+    6. ca.dt -- dims: (); attributes: 'units'; float
         A 1D arary containing dt.
-    7. ca.dz -- coords: (fov, n, t, ch), float
+    7. ca.dz -- dims: (), float
         A 1D arary containing dz.
-    9. ca.dy -- coords: (fov, n, t, ch), float
+    9. ca.dy -- dims: (), float
         A 1D arary containing dy.
-    9. ca.dx -- coords: (fov, n, t, ch), float
+    9. ca.dx -- dims: (), float
         A 1D arary containing dx.
 
     """
@@ -183,6 +182,7 @@ def create_crop_array(video, df, **kwargs):
     dy = xr.DataArray(my_dy, coords=[], dims=[], attrs={'units':'nm'}) 
     dz = xr.DataArray(my_dz, coords=[], dims=[], attrs={'units':'nm'}) 
     dt = xr.DataArray(my_dt, coords=[], dims=[], attrs={'units':'sec'}) 
+    xy_pad = xr.DataArray(xy_pad, coords=[], dims=[], attrs={'units':'nm'}) 
     intensity = xr.DataArray(my_crops_all.astype(int), coords=[fov, n, t, z, y, x, ch], dims=['fov', 'n', 't', 'z', 'y', 'x', 'ch'], attrs = {'units':'intensity (a.u.)'})
     xc = xr.DataArray(my_xc_all.astype(int), coords= [fov, n, t, ch], dims=['fov', 'n', 't', 'ch'], attrs = {'units':units[0]})
     yc = xr.DataArray(my_yc_all.astype(int), coords= [fov, n, t, ch], dims=['fov', 'n', 't', 'ch'], attrs = {'units':units[0]})
@@ -197,7 +197,8 @@ def create_crop_array(video, df, **kwargs):
     'dx': dx,
     'dy': dy,
     'dz': dz,
-    'dt': dt
+    'dt': dt,
+    'xy_pad': xy_pad
     }
     dict2.update(dict1)
 
@@ -220,7 +221,7 @@ def best_z_proj(ca, **kwargs):
     ref_ch: int, optional 
         A reference intensity channel for finding the best-z projection. Default: ref_ch = 0
     disk_r: int, optional
-        The radius of the disk (in pixels) to make measurements to determine the best-z slice. Default: disk_r = 2
+        The radius of the disk (in pixels) to make measurements to determine the best-z slice. Default: disk_r = 1
     roll_num: int, optional
         The number of z-slices to use in the rolling-z max projection for determining the best-z slice. min_periods in the da.rolling() function is set to 1 so there will be no Nans at the z-edges of crops. Default: roll_num = 1.
 
@@ -231,7 +232,7 @@ def best_z_proj(ca, **kwargs):
     '''
     # Get the optional key word arguments (kwargs):
     ref_ch = kwargs.get('ref_ch', 0)
-    disk_r = kwargs.get('disk_r', 2) 
+    disk_r = kwargs.get('disk_r', 1) 
     roll_n = kwargs.get('roll_n', 1)
 
     res = ca.dx # resolution for defining disk to make measurements to determine best-z
@@ -241,6 +242,53 @@ def best_z_proj(ca, **kwargs):
 
     # Choose z-plane in ca.int corresponding to max z-signal for each channel, then concatenate x-arrays with coordinate channels
     return xr.concat([ca.int.sel(ch=i).rolling(z=roll_n,center=True,min_periods=1).max().isel(z_sig.argmax(dim=['z'])) for i in ca.ch], dim='ch')
+
+def measure_signal(ca, **kwargs):
+    '''
+    A function to measure and visualize the intensity signal of all crops in the crop array ca. 
+
+    Parameters
+    ----------
+    ca: crop arrray (x-array dataset)
+        A crop array.
+    ref_ch: int, optional 
+        A reference intensity channel for finding the best-z plane for measurements. Default: ref_ch = 0    
+    disk_r: int, optional
+        The radius (in pixels) within which the intensity signal for each crop is measured. Default: disk_r = 1
+    disk_bg: int, optional
+        The radius (in pixels) of an outer ring (of width one pixel) within which which the background signal for each crop is measured. Default: disk_bg = ca.xy_pad.
+    roll_num: int, optional
+        The number of z-slices to use in the rolling-z max projection for determining the best-z slices to perform intensity measurements. min_periods in the da.rolling() function is set to 1 so there will be no Nans at the z-edges of crops. Default: roll_num = 1.
+
+    Returns
+    ------- 
+    An augmented crop array ca with two additional variables: (1) ca.best_z is an x-array with dimensions (fov,n,t,y,x,ch) that contains the best-z-projection after background subtraction; (2) ca.best_z_signal is an x-array with dimensions (fov,n,t,ch) that contains the background-subtracted intensity signal of each crop in ca.best_z. 
+    '''
+    # Get the optional key word arguments (kwargs):
+    my_ref_ch = kwargs.get('ref_ch', 0)
+    my_disk_r = kwargs.get('disk_r', 1) 
+    my_disk_bg = kwargs.get('disk_bg',ca.xy_pad) 
+    my_roll_n = kwargs.get('roll_n', 1)
+
+    # Create best-z projection (if not already)
+    best_z = best_z_proj(ca, ref_ch=my_ref_ch, disk_r=my_disk_r, roll_n=my_roll_n)
+    
+    # Make mask for measuring within inner ring (the disk):
+    disk_sig = best_z.where(lambda a: a.x**2 + a.y**2 <= (my_disk_r*ca.dx)**2).mean(dim=['x','y'])
+    
+    # Make mask for measuring background within outer ring (the donut):
+    donut_sig = best_z.where(lambda a: (a.x**2 + a.y**2 >= (my_disk_bg*ca.dx)**2) & (a.x**2 + a.y**2 < ((my_disk_bg+1)*ca.dx)**2)).mean(dim=['x','y'])
+
+    # Measure signal as disk - donut: 
+    signal = disk_sig - donut_sig 
+
+    # Add best_z variable to ca
+    ca['best_z'] = best_z - disk_sig
+
+    # Add best_z_signal variable to ca:
+    ca['best_z_signal'] = signal
+
+    pass
 
 def montage(ca, **kwargs):
     '''
@@ -264,7 +312,7 @@ def montage(ca, **kwargs):
     row = kwargs.get('row', 'n') 
 
     if row != col: # arrange crops in rows and columns in the xy plane 
-        output = ca.stack(r=(row,'y'),c=(col,'x')).transpose('id','fov','n','t','z','r','c','ch', missing_dims='ignore') 
+        output = ca.stack(r=(row,'y'),c=(col,'x')).transpose('tracks','fov','n','t','z','r','c','ch', missing_dims='ignore') 
 
     if row == col:  # arrange crops in square col x col montage in the xy-plane
         col_length = len(ca.coords.get(col))
@@ -285,6 +333,7 @@ def montage(ca, **kwargs):
         ).rename({col:'montage'}  # rename 'col' dimension in x-arrays to 'montage'
         ).unstack(                # unstack the montage_row and montage_col coordinates    
         ).stack(r=('montage_row','y'), c=('montage_col','x')  # Arrange crops in c x r square in xy-plane
-        ).transpose('id','fov','n','t','z','r','c','ch',missing_dims='ignore') # Ensure standard crop array ordering
+        ).transpose('tracks','fov','n','t','z','r','c','ch',missing_dims='ignore') # Ensure standard crop array ordering
 
     return output
+
