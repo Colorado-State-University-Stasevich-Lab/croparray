@@ -272,7 +272,7 @@ def measure_signal(ca, **kwargs):
 
     Returns
     ------- 
-    An augmented crop array ca with two additional variables: (1) ca.best_z is an x-array with dimensions (fov,n,t,y,x,ch) that contains the best-z-projection after background subtraction; (2) ca.best_z_signal is an x-array with dimensions (fov,n,t,ch) that contains the background-subtracted intensity signal of each crop in ca.best_z. 
+    An augmented crop array ca with two additional variables: (1) ca.best_z is an x-array with dimensions (fov,n,t,y,x,ch) that contains the best-z-projection after background subtraction; (2) ca.signal is an x-array with dimensions (fov,n,t,ch) that contains the background-subtracted intensity signal of each crop in ca.best_z. 
     '''
     # Get the optional key word arguments (kwargs):
     my_ref_ch = kwargs.get('ref_ch', 0)
@@ -294,9 +294,13 @@ def measure_signal(ca, **kwargs):
 
     # Add best_z variable to ca
     ca['best_z'] = best_z - disk_sig
+    ca['best_z'].attrs['units'] = 'intensity (a.u.)'
+    ca['best_z'].attrs['long_name'] = 'max intensity projection into best-z plane(s)'
 
     # Add best_z_signal variable to ca:
-    ca['best_z_signal'] = signal
+    ca['signal'] = signal
+    ca['signal'].attrs['units'] = 'intensity (a.u.)'
+    ca['signal'].attrs['long_name'] = 'crop signal'
 
     pass
 
