@@ -29,7 +29,7 @@ def create_crop_array(video, df, **kwargs):
     df: pandas dataframe
         A dataframe with the ids and coordinates of selected spots for making crops from video. Minimally, the dataframe must have 5 columns (1) 'fov': the fov number for each spot; can also be a filename for each fov. (2) 'id': the integer id of each spot. (3) 'f': integer frame number of each spot. (4) 'yc': the lateral y-coordinate of the spot for centering the crop in y, (5) 'xc': the lateral x-coodinate of the spot for centering the crop in x. Any additional columns must be numeric and will be automatically converted to individual x-arrays in the crop array dataset that have the column header as a name.
     xy_pad: int, optional
-        The amount of pixels to pad the centered pixel for each crop in the lateral x and y directions. Note the centered pixel is defined as the pixel containing the coordinates (xc, yc, zc) for each crop. As an example, if xy_pad = 5, then each crop in the crop array will have x and y dimensions of 11 = 2*xy_pad + 1.
+        The amount of pixels to pad the centered pixel for each crop in the lateral x and y directions. Note the centered pixel is defined as the pixel containing the coordinates (xc, yc) for each crop. As an example, if xy_pad = 5, then each crop in the crop array will have x and y dimensions of 11 = 2*xy_pad + 1.
     dz: int, optional
         The size of pixels in the x-direction.
     dy: int, optional 
@@ -65,16 +65,16 @@ def create_crop_array(video, df, **kwargs):
     3. ca.yc -- dims: (fov, n, t, ch); attributes: 'units'; uint16
         An x-array containing the yc coordinates of the crops in the video.
     4. ca.xc -- dims: (fov, n, t, ch); attributes: 'units'; uint16
-        An x-array containing the zc coordinates of the crops in the video.
+        An x-array containing the xc coordinates of the crops in the video.
     5. ca.xy_pad -- dims: (); attributes: 'units'; uint16
         A 1D array containing xy-pad. 
     6. ca.dt -- dims: (); attributes: 'units'; float
         A 1D arary containing dt.
-    7. ca.dz -- dims: (), float
+    7. ca.dz -- dims: (); attributes: 'units'; float
         A 1D arary containing dz.
-    9. ca.dy -- dims: (), float
+    9. ca.dy -- dims: (); attributes: 'units'; float
         A 1D arary containing dy.
-    9. ca.dx -- dims: (), float
+    9. ca.dx -- dims: (); attributes: 'units'; float
         A 1D arary containing dx.
 
     """
@@ -94,7 +94,7 @@ def create_crop_array(video, df, **kwargs):
     n_fov, n_frames, z_slices, height_y, width_x, n_channels = list(video.shape)
     print('Original video dimensions: ', video.shape)
 
-    # Pad video in xy-lateral direction by xy-pad so crops can be made for all spots
+    # Pad video in xy-lateral direction by xy_pad so crops can be made for all spots
     npad = ((0,0),(0,0), (0,0), (xy_pad+1,xy_pad+1), (xy_pad+1,xy_pad+1), (0,0))
     video = np.pad(video, pad_width=npad, mode='constant', constant_values=0)
     print('Padded video dimensions: ', video.shape)
@@ -171,21 +171,23 @@ def create_crop_array(video, df, **kwargs):
 
     # Create X-arrays from the data arrays to go into the X-array dataset: 
     #Create coordinates
-    n = np.arange(n_spots_max)
-    t = np.arange(n_frames)*my_dt
-    z = np.arange(z_slices)*my_dz
-    y = np.arange(-xy_pad,xy_pad+1)*my_dy
-    x = np.arange(-xy_pad,xy_pad+1)*my_dx
+    n = xr.DataArray(np.arange(n_spots_max).astype(np.int16), attrs={'long_name':'crop count'})
+    t =  xr.DataArray(np.arange(n_frames)*my_dt, attrs={'units':units[1],'long_name':'time'})
+    z = xr.DataArray(np.arange(z_slices)*my_dz, attrs={'units':units[0],'long_name':'axial z-distance'})
+    y = xr.DataArray(np.arange(-xy_pad,xy_pad+1)*my_dy, attrs={'units':units[0],'long_name':'radial y-distance'})
+    x = xr.DataArray(np.arange(-xy_pad,xy_pad+1)*my_dx, attrs={'units':units[0],'long_name':'radial x-distance'})
     ch = np.arange(n_channels)
     fov = np.arange(n_fov)
-    dx = xr.DataArray(my_dx, coords=[], dims=[], attrs={'units':'nm'}) 
-    dy = xr.DataArray(my_dy, coords=[], dims=[], attrs={'units':'nm'}) 
-    dz = xr.DataArray(my_dz, coords=[], dims=[], attrs={'units':'nm'}) 
-    dt = xr.DataArray(my_dt, coords=[], dims=[], attrs={'units':'sec'}) 
-    xy_pad = xr.DataArray(xy_pad, coords=[], dims=[], attrs={'units':'nm'}) 
-    intensity = xr.DataArray(my_crops_all.astype(int), coords=[fov, n, t, z, y, x, ch], dims=['fov', 'n', 't', 'z', 'y', 'x', 'ch'], attrs = {'units':'intensity (a.u.)'})
-    xc = xr.DataArray(my_xc_all.astype(int), coords= [fov, n, t, ch], dims=['fov', 'n', 't', 'ch'], attrs = {'units':units[0]})
-    yc = xr.DataArray(my_yc_all.astype(int), coords= [fov, n, t, ch], dims=['fov', 'n', 't', 'ch'], attrs = {'units':units[0]})
+
+    #Create x-array variables/layers
+    dx = xr.DataArray(my_dx, coords=[], dims=[], attrs={'units':units[0],'long_name':'x-resolution'}) 
+    dy = xr.DataArray(my_dy, coords=[], dims=[], attrs={'units':units[0],'long_name':'y-resolution'}) 
+    dz = xr.DataArray(my_dz, coords=[], dims=[], attrs={'units':units[0],'long_name':'z-resolution'}) 
+    dt = xr.DataArray(my_dt, coords=[], dims=[], attrs={'units':units[1], 'long_name':'temporal resolution'}) 
+    xy_pad = xr.DataArray(xy_pad, coords=[], dims=[], attrs={'units':'pixels'}) 
+    intensity = xr.DataArray(my_crops_all.astype(int), coords=[fov, n, t, z, y, x, ch], dims=['fov', 'n', 't', 'z', 'y', 'x', 'ch'], attrs = {'units':'intensity (a.u.)','long_name':'intensity'})
+    xc = xr.DataArray(my_xc_all.astype(int), coords= [fov, n, t, ch], dims=['fov', 'n', 't', 'ch'], attrs = {'units':'pixels','long_name':'crop center x'})
+    yc = xr.DataArray(my_yc_all.astype(int), coords= [fov, n, t, ch], dims=['fov', 'n', 't', 'ch'], attrs = {'units':'pixels','long_name':'crop center y'})
     optional_layers = [xr.DataArray(my_layers[col], coords = [fov, n, t], dims=['fov', 'n', 't']) for col in np.arange(len(my_columns))] 
     
     #Set up dictionary of x-arrays for making a dataset
@@ -205,18 +207,18 @@ def create_crop_array(video, df, **kwargs):
     # Create the X-array dataset
     ds = xr.Dataset(
     dict2, 
-    attrs = {'units': units, 'name': name, 'date': date}
+    attrs = {'name': name, 'date': date}
     )
 
     return ds
 
 def best_z_proj(ca, **kwargs):
     '''
-    Returns an x-array that holds the best-z projection of intensities of spots in a reference channel.
+    Returns an x-array that holds the best-z projection of intensities of spots in a reference channel and augments ca to include a 'ca.zc' layer that holds the best-z values.
 
     Parameters
     ----------
-    ca: crop arrray (x-array dataset)
+    ca: crop array (x-array dataset)
         A crop array.
     ref_ch: int, optional 
         A reference intensity channel for finding the best-z projection. Default: ref_ch = 0
@@ -227,7 +229,7 @@ def best_z_proj(ca, **kwargs):
 
     Returns
     ------- 
-    A 'best-z' x-array with dimensions (fov,n,t,y,x,ch). The best-z x-array contains the intensities of each crop in the 'best' z-slice, where 'best' is defined as the slice having the maximal intensity within a centered xy disk of radius disk_r pixels. A rolling-z maximum projection (over roll_n z-slices) can optionally be performed so best-z represents a max-z projection across multiple z-slices.
+    A 'best-z' x-array with dimensions (fov,n,t,y,x,ch). The best-z x-array contains the intensities of each crop in the 'best' z-slice, where 'best' is defined as the slice having the maximal intensity within a centered xy disk of radius disk_r pixels. A rolling-z maximum projection (over roll_n z-slices) can optionally be performed so best-z represents a max-z projection across multiple z-slices. In addition, the inputted crop array ca is augmented to now contain a 'zc' layer tha contains the best-z position of each crop. 
     
     '''
     # Get the optional key word arguments (kwargs):
@@ -241,7 +243,15 @@ def best_z_proj(ca, **kwargs):
     z_sig = ca.sel(ch=ref_ch).int.where(lambda a: a.x**2 + a.y**2 <= (disk_r*res)**2).mean(dim=['x','y']).rolling(z=roll_n, center=True, min_periods=1).max()
 
     # Choose z-plane in ca.int corresponding to max z-signal for each channel, then concatenate x-arrays with coordinate channels
-    return xr.concat([ca.int.sel(ch=i).rolling(z=roll_n,center=True,min_periods=1).max().isel(z_sig.argmax(dim=['z'])) for i in ca.ch], dim='ch')
+    output = xr.concat([ca.int.sel(ch=i).rolling(z=roll_n,center=True,min_periods=1).max().isel(z_sig.argmax(dim=['z'])) for i in ca.ch], dim='ch')
+    
+    # Add/overwrite the 'zc' layer in the inputted crop-array
+    ca['zc'] = z_sig.argmax(dim='z')
+    ca.zc.attrs['units']='pixels'
+    ca.zc.attrs['long_name']='crop center z'
+
+    return output
+
 
 def measure_signal(ca, **kwargs):
     '''
