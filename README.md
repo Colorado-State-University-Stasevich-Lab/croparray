@@ -32,8 +32,13 @@ This module is intended for creating and manipulating an array of crops (or regi
 ```
 
 * To install the rest of requirements use:
-```
+```bash
     pip install -r requirements.txt
+```
+
+* To install napari use:
+```bash
+python -m pip install "napari[all]"
 ```
 
 ## Local installation using PIP
@@ -48,6 +53,11 @@ This module is intended for creating and manipulating an array of crops (or regi
 * Open the terminal and use [pip](https://pip.pypa.io/en/stable/) for the installation:
 ```bash
     pip install croparray
+```
+
+* To install napari use:
+```bash
+python -m pip install "napari[all]"
 ```
 
 ## Deactivating and removing the environment
@@ -69,6 +79,19 @@ This module is intended for creating and manipulating an array of crops (or regi
 * If you cannot see the package installed on your computer, try using ```pip3```. For example: 
 ```bash
     pip3 install croparray
+```
+
+## Installing from yml env
+
+* To creating an environment file (yml) use:
+```sh
+source activate croparray_env
+conda env export > croparray_env.yml
+```
+
+* ToCreate an environment from this yml file.
+```sh
+conda env create -f croparray_env.yml
 ```
 
 ## Usage
