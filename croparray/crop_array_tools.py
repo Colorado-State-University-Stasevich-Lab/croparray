@@ -387,6 +387,7 @@ def tracking_spots(img,particle_diameter=5,max_distance_movement=5,min_trajector
         smothing_window = 5
     else:
         smothing_window = 2
+    smothing_window = 10
     tested_intensities = np.round(np.linspace(40, np.amax(img), num_iterations ),0)
     for i, int_tested in enumerate (tested_intensities):
         try:
@@ -409,9 +410,17 @@ def tracking_spots(img,particle_diameter=5,max_distance_movement=5,min_trajector
         selected_minmass = np.round(tested_intensities [inflection_points[0]],0)
         optimization_worked = False
     # Tracking after finding the best threshold
-    f = tp.batch(img, diameter=particle_diameter,minmass=selected_minmass)
-    linked = tp.link_df(f, max_distance_movement) # Linking trajectories
-    tracking_df = tp.filter_stubs(linked, min_trajectory_length) # Filtering with minimum length
+    try:
+        f = tp.batch(img, diameter=particle_diameter,minmass=selected_minmass)
+        linked = tp.link_df(f, max_distance_movement) # Linking trajectories
+        tracking_df = tp.filter_stubs(linked, min_trajectory_length) # Filtering with minimum length
+    except:
+        # Backup if the select threshold is too low.
+        selected_minmass = np.round(tested_intensities [inflection_points[1]],0)
+        f = tp.batch(img, diameter=particle_diameter,minmass=selected_minmass)
+        linked = tp.link_df(f, max_distance_movement) # Linking trajectories
+        tracking_df = tp.filter_stubs(linked, min_trajectory_length) # Filtering with minimum length
+        
 
     ####### Converting TracPy dataframe to Croparray format #######
     # Renaming columns names
