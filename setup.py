@@ -7,9 +7,17 @@ with open("README.md", "r") as fh:
 with open("requirements.txt", encoding='utf-8') as f:
     requirements = [l.strip() for l in f.readlines() if l]
 
+# package version
+__version__ = None
+with open('rsnaped/__init__.py', encoding='utf-8') as f:
+    for row in f:
+        if row.startswith('__version__'):
+            __version__ = row.strip().split()[-1][1:-1]
+            break
+        
 setup(
     name = "croparray",
-    version = "0.0.8",
+    version = __version__,
     author = "Tim Stasevich",
     author_email = "Tim.Stasevich@colostate.edu",
     description = ("Python module for for creating and manipulating an array of crops (or regions of interest) from images obtained using single-molecule microscopy."),
