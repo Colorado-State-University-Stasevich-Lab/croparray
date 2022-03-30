@@ -33,12 +33,21 @@ This module is intended for creating and manipulating an array of crops (or regi
 
 * To install the rest of requirements use:
 ```bash
-    pip install -r requirements.txt
+    python3 -m pip install -r requirements.txt
 ```
 
 * To install napari use:
 ```bash
-python -m pip install "napari[all]"
+    python3 -m pip install "napari[all]"
+```
+
+* To install Pytorch for GPU usage in Cellpose (Optional step). Only for **Linux and Windows users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
+```sh
+ conda install pytorch cudatoolkit=10.2 -c pytorch -y
+```
+* To install Pytorch for CPU usage in Cellpose (Optional step). Only for **Mac users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
+```sh
+ conda install pytorch -c pytorch
 ```
 
 ## Local installation using PIP
@@ -52,12 +61,12 @@ python -m pip install "napari[all]"
 
 * Open the terminal and use [pip](https://pip.pypa.io/en/stable/) for the installation:
 ```bash
-    pip install croparray
+    python3 -m pip install croparray
 ```
 
 * To install napari use:
 ```bash
-python -m pip install "napari[all]"
+    python3 -m pip install "napari[all]"
 ```
 
 ## Deactivating and removing the environment
