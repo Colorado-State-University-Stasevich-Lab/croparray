@@ -364,6 +364,26 @@ def montage(ca, **kwargs):
     return output
 
 
+# Outputting signal data array in crop xarray to a convenient dataframe for plotting barplots and such. 
+def signal_to_df(ca):
+    '''
+    Returns an x-array that holds the best-z projection of intensities of spots in a reference channel and augments ca to include a 'ca.zc' layer that holds the best-z values.
+
+    Parameters
+    ----------
+    ca: crop array (x-array dataset)
+        A crop array with measured 'signal' variable. 
+    
+    Returns
+    -------
+    A pandas dataframe with crop array signals such that each column of the dataframe corresponds to one coordinate dimension in th crop array. Basically the output corresponds to xr.to_dataframe(), but with multiindex flattened.
+    
+    '''
+    # Converts crop array to flattened dataframe for seaborn-like plotting
+    dim_levels =list(np.arange(len(ca.signal.dims)))
+    return ca.signal.to_dataframe().reset_index(level=dim_levels)
+
+
 # Detecting particles for each frame
 def tracking_spots(img,particle_diameter=5,max_distance_movement=5,min_trajectory_length=5, num_iterations = 100,show_plots=True):
     """
