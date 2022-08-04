@@ -6,6 +6,5 @@ Created on Nov 26 2021
 """
 name = 'crop_array_tools'
 
-
 #Package version
-__version__ = "0.1.1"
+__version__ = "0.1.2"
