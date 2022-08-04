@@ -8,4 +8,4 @@ name = 'crop_array_tools'
 
 
 #Package version
-__version__ = "0.1.0"
+__version__ = "0.1.1"
