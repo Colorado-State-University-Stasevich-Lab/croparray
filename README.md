@@ -40,6 +40,10 @@ This module is intended for creating and manipulating an array of crops (or regi
 ```bash
     python3 -m pip install "napari[all]"
 ```
+* To ensure the docstrings of functions in crop_array_tools.py appear in jupyter notebooks that import crop_array_tools:
+```sh
+conda develop .\croparray\
+```
 
 * To install Pytorch for GPU usage in Cellpose (Optional step). Only for **Linux and Windows users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
 ```sh
