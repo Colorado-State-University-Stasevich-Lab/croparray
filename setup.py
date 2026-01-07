@@ -9,7 +9,7 @@ with open("requirements.txt", encoding='utf-8') as f:
 
 # package version
 __version__ = None
-with open('rsnaped/__init__.py', encoding='utf-8') as f:
+with open('croparray/__init__.py', encoding='utf-8') as f:
     for row in f:
         if row.startswith('__version__'):
             __version__ = row.strip().split()[-1][1:-1]
