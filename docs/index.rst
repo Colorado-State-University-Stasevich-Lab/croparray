@@ -1,15 +1,16 @@
 croparray: Module Guide
 ===================================
-.. image:: images/ Fig1-CropArrayConceptV4.png
+
+.. image:: images/Fig1-CropArrayConceptV4.png
     :width: 600
     :alt: croparray
 
-.. automodule:: croparray.crop_array_tools
-    :members:
-    
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+
+   api/api
+   modules
 
 Indices and tables
 ==================
