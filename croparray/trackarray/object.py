@@ -21,10 +21,18 @@ class TrackArray:
     ds: xr.Dataset
 
     def __post_init__(self):
+        # --- validation ---
         if not isinstance(self.ds, xr.Dataset):
             raise TypeError("TrackArray expects an xarray.Dataset")
         if "track_id" not in self.ds.dims:
             raise ValueError("TrackArray dataset must have a 'track_id' dimension")
+
+        # --- accessors (namespaced API) ---
+        from ..accessors import TrackArrayPlot, TrackArrayView, TrackArrayDF
+
+        self.plot = TrackArrayPlot(self)
+        self.view = TrackArrayView(self)
+        self.df = TrackArrayDF(self)
 
     def __repr__(self) -> str:
         return f"TrackArray(tracks={self.ds.dims.get('track_id', '?')}, t={self.ds.dims.get('t', '?')})"
