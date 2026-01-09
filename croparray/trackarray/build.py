@@ -3,7 +3,7 @@ import pandas as pd
 import xarray as xr
 
 # Make track_id dimension in crop array (that has been tracked)
-def track_array(ca):
+def track_array(ca, as_object: bool = False):
     """
     Create a track-array dataset from a tracked crop-array dataset by grouping
     entries by unique track IDs (stored in ca['id']).
@@ -60,5 +60,9 @@ def track_array(ca):
 
     # Reorder dimensions (drop 'n' from transpose; it was dropped above)
     my_taz = my_taz.transpose("track_id", "fov", "t", "z", "y", "x", "ch", missing_dims="ignore")
+
+    if as_object:
+        from .object import TrackArray
+        return TrackArray(my_taz)
 
     return my_taz
