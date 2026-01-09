@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 '''
 Python code to create, manipulate, and analyze an array of crops from TIF images or videos.
-Created: Summer of 2020
+Created: Summer of 2020 (updated Jan 2026 by Tim Stasevich)
 Authors: Tim Stasevich & Luis Aguilera.
 '''
 
@@ -20,8 +20,8 @@ if import_libraries == 1:
     import trackpy as tp
     import matplotlib.pyplot as plt 
     from matplotlib import gridspec
-    import napari
-    import seaborn as sns
+#    import napari
+#    import seaborn as sns
     import math
     # from napari.utils import nbscreenshot
 
@@ -50,16 +50,6 @@ def print_banner():
         "╚█████╔╝██║░░██║╚█████╔╝██║░░░░░██║░░██║██║░░██║██║░░██║██║░░██║░░░██║░░░\n"
         "░╚════╝░╚═╝░░╚═╝░╚════╝░╚═╝░░░░░╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝╚═╝░░╚═╝░░░╚═╝░░░\n"
         "                                     by : Luis Aguilera and Tim Stasevich \n\n"        )
-
-
-
-
-
-
-
-
-
-
 
 
 
