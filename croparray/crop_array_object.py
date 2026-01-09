@@ -14,6 +14,33 @@ class CropArray:
     """
     ds: xr.Dataset
 
+    def __post_init__(self):
+        """
+        Attach namespaced accessors (io/build/measure/plot/view/df/track)
+        so you can call e.g.:
+            ca1.plot.montage(...)
+            ca1.measure.best_z_proj(...)
+            ca1.track.to_trackarray(...)
+        """
+        from .accessors import (
+            CropArrayIO,
+            CropArrayBuild,
+            CropArrayMeasure,
+            CropArrayPlot,
+            CropArrayView,
+            CropArrayDF,
+            CropArrayTrack,
+        )
+
+        self.io = CropArrayIO(self)
+        self.build = CropArrayBuild(self)
+        self.measure = CropArrayMeasure(self)
+        self.plot = CropArrayPlot(self)
+        self.view = CropArrayView(self)
+        self.df = CropArrayDF(self)
+        self.track = CropArrayTrack(self)
+
+    
     def __getitem__(self, key: str):
         return self.ds[key]
 
