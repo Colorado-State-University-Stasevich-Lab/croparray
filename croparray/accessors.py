@@ -52,6 +52,26 @@ class CropArrayMeasure(_BaseAccessor):
 
 
 @dataclass
+class CropArrayOps(_BaseAccessor):
+    def apply(self, func, source="best_z", *args, **kwargs):
+        """
+        Apply a single-crop function across the crop array using xr.apply_ufunc.
+
+        Parameters
+        ----------
+        func : callable
+            Function that operates on a single crop (e.g. (x,y) array) and returns
+            either a scalar or an image.
+        source : str
+            Name of the DataArray in the dataset to operate on (default: "best_z").
+
+        Other args/kwargs are forwarded to apply_crop_op.
+        """
+        from .crop_ops.apply import apply_crop_op
+        return apply_crop_op(self.ds, func, source=source, *args, **kwargs)
+
+
+@dataclass
 class CropArrayPlot(_BaseAccessor):
     def montage(self, *args, **kwargs):
         from .plot import montage
