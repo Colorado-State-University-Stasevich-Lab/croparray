@@ -59,3 +59,47 @@ def montage(ca, **kwargs):
         ).transpose('cell','rep','exp','tracks','fov','n','t','z','r','c','ch',missing_dims='ignore') # Ensure standard crop array ordering
 
     return output
+
+
+
+
+def rescale_rgb_0_255(arr):
+    """
+    Rescale an image array to uint8 [0, 255] using global min/max.
+    Works for (Y,X,3) or any array with last dim = channels.
+    """
+    import numpy as np
+    arr = np.asarray(arr, dtype=float)
+
+    vmin = np.nanmin(arr)
+    vmax = np.nanmax(arr)
+
+    if vmax <= vmin:
+        return np.zeros_like(arr, dtype=np.uint8)
+
+    out = (arr - vmin) / (vmax - vmin)
+    out = np.clip(out * 255, 0, 255).astype(np.uint8)
+    return out
+
+
+def show_rgb_large(img8, *, scale=1.0, title=None):
+    """
+    Display an RGB image at an appropriate physical size in matplotlib.
+
+    Parameters
+    ----------
+    img8 : ndarray
+        (Y, X, 3) uint8 image
+    scale : float
+        Multiplicative scale factor for display size (1.0 ≈ 1 pixel = 1/100 inch)
+    """
+    import matplotlib.pyplot as plt
+    h, w = img8.shape[:2]
+    dpi = 100
+
+    fig = plt.figure(figsize=(w / dpi * scale, h / dpi * scale), dpi=dpi)
+    plt.imshow(img8)
+    plt.axis("off")
+    if title:
+        plt.title(title)
+    plt.show()
