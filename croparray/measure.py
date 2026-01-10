@@ -1,6 +1,8 @@
 import numpy as np
 import xarray as xr
-from scipy.ndimage import gaussian_filter
+from scipy import ndimage as ndi
+from skimage.measure import label, regionprops
+
 
 def best_z_proj(ca, **kwargs):
     '''
@@ -155,5 +157,107 @@ def measure_signal_raw(ca, **kwargs):
     ca['signal_raw'] = disk_sig
     ca['signal_raw'].attrs['units'] = 'intensity (a.u.)'
     ca['signal_raw'].attrs['long_name'] = 'crop signal'
+
+    return ca
+
+
+
+def measure_mask_props(
+    ca,
+    *,
+    source: str,
+    out_prefix: str | None = None,
+    props: tuple[str, ...] = ("area_px", "eccentricity", "solidity", "perimeter_px", "centroid_y_px", "centroid_x_px"),
+    connectivity: int = 2,
+    empty_value: float = np.nan,
+):
+    """
+    Measure morphology from a binary mask layer across the entire crop array and add scalar
+    measurement layers back onto `ca`.
+
+    Outputs are named: f"{out_prefix}__{prop}" and have dims equal to the non-(y,x) dims of `source`.
+    """        
+    if source not in ca:
+        raise KeyError(f"source='{source}' not found. Available: {list(ca.data_vars)}")
+
+    out_prefix = out_prefix or source
+
+    da = ca[source]
+    if da.ndim < 2:
+        raise ValueError(f"Mask layer '{source}' must be at least 2D (y,x). Got dims={da.dims}")
+
+    # Convention: last two dims are spatial
+    ydim, xdim = da.dims[-2], da.dims[-1]
+    lead_dims = da.dims[:-2]
+    lead_shape = da.shape[:-2]
+    H, W = da.shape[-2], da.shape[-1]
+
+    arr = np.asarray(da.data).astype(bool).reshape((-1, H, W))
+    N = arr.shape[0]
+
+    want = set(props)
+    out = {}
+
+    # Area (vectorized)
+    if "area_px" in want:
+        out["area_px"] = arr.reshape(N, -1).sum(axis=1).astype(float)
+
+    # Centroid (cheap loop)
+    if ("centroid_y_px" in want) or ("centroid_x_px" in want):
+        cy = np.full(N, empty_value, dtype=float)
+        cx = np.full(N, empty_value, dtype=float)
+        for i in range(N):
+            m = arr[i]
+            if m.any():
+                yy, xx = ndi.center_of_mass(m.astype(np.uint8))
+                cy[i], cx[i] = float(yy), float(xx)
+        if "centroid_y_px" in want:
+            out["centroid_y_px"] = cy
+        if "centroid_x_px" in want:
+            out["centroid_x_px"] = cx
+
+    # Pixel-perimeter proxy (fast, robust)
+    if "perimeter_px" in want:
+        per = np.full(N, empty_value, dtype=float)
+        for i in range(N):
+            m = arr[i]
+            if m.any():
+                er = ndi.binary_erosion(m, structure=np.ones((3, 3), dtype=bool))
+                boundary = m & (~er)
+                per[i] = float(boundary.sum())
+        out["perimeter_px"] = per
+
+    # Regionprops-derived (compute only if requested; slower)
+    rp_map = {
+        "eccentricity": "eccentricity",
+        "solidity": "solidity",
+        "extent": "extent",
+        "major_axis_length_px": "major_axis_length",
+        "minor_axis_length_px": "minor_axis_length",
+        "orientation_rad": "orientation",
+    }
+    rp_needed = [(k, v) for k, v in rp_map.items() if k in want]
+    if rp_needed:
+        for k, _ in rp_needed:
+            out[k] = np.full(N, empty_value, dtype=float)
+
+        for i in range(N):
+            m = arr[i]
+            if not m.any():
+                continue
+            lab = label(m, connectivity=connectivity)
+            regs = regionprops(lab)
+            if not regs:
+                continue
+            r = max(regs, key=lambda rr: rr.area)  # largest component
+            for kout, kin in rp_needed:
+                out[kout][i] = float(getattr(r, kin))
+
+    # Attach outputs back to ca
+    for k, vec in out.items():
+        name = f"{out_prefix}__{k}"
+        ca[name] = xr.DataArray(vec.reshape(lead_shape), dims=lead_dims)
+        ca[name].attrs["source_layer"] = source
+        ca[name].attrs["long_name"] = f"{k} from {source}"
 
     return ca

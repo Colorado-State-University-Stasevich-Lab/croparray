@@ -27,7 +27,7 @@ if import_libraries == 1:
 
 from .io import open_croparray, open_croparray_zarr
 from .build import _create_crop_array_dataset, create_crop_array
-from .measure import best_z_proj, measure_signal, measure_signal_raw
+from .measure import best_z_proj, measure_signal, measure_signal_raw, measure_mask_props
 from .plot import montage
 from .napari_view import view_montage
 from .dataframe import variables_to_df
