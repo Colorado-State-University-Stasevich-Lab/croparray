@@ -81,117 +81,75 @@ def binarize_crop_manual(
     img,
     *,
     th1: float,
-    th2: float,
-    seed: str = "spot",          # "spot" or "center"
-    minmass: float = 100.0,      # used only if seed="spot"
-    size: int = 5,               # used only if seed="spot"
-    max_dist_px: float | None = None,  # optional: reject if nearest component too far
+    max_dist_px: float | None = None,
     fill_holes: bool = False,
-    close_px: int = 0,           # optional morphological closing radius
+    close_px: int = 0,
     return_uint8: bool = True,
+    smooth_px: int - 1, # 0 = off, 1 = light rounding (recommended)
 ):
     """
-    Manual band-pass binarization: keep pixels with th1 <= I <= th2, then keep
-    only the connected component nearest the seed (spot or crop center).
-
-    Parameters
-    ----------
-    img : 2D array
-        Crop image.
-    th1, th2 : float
-        Lower/upper intensity thresholds (inclusive).
-    seed : {"spot","center"}
-        Seed selection mode:
-          - "spot": use spot_detect_and_qc to find seed (y,x)
-          - "center": use crop center as seed
-    minmass, size : float, int
-        Passed to spot_detect_and_qc when seed="spot".
-    max_dist_px : float or None
-        If set, return empty mask when nearest component is farther than this.
-    fill_holes : bool
-        Fill holes in the selected component.
-    close_px : int
-        If >0, apply binary closing to the band-pass mask before selecting the component.
-    return_uint8 : bool
-        Return uint8 (0/1) if True, else bool.
-
-    Returns
-    -------
-    mask : 2D array
-        Binary mask.
+    Fast single-threshold binarization:
+      - threshold (img >= th1)
+      - optional closing
+      - label components (8-connectivity)
+      - pick component with minimum distance to center (via ndimage.minimum)
     """
     import numpy as np
+    from scipy import ndimage as ndi
 
     img = np.asarray(img)
     if img.ndim != 2:
-        raise ValueError(f"binarize_crop_manual expects 2D image, got {img.shape}")
+        raise ValueError(f"binarize_crop_manual_fast expects 2D image, got {img.shape}")
 
-    lo = float(min(th1, th2))
-    hi = float(max(th1, th2))
+    # 1) Threshold
+    m = img >= float(th1)
 
-    # Band-pass
-    m = (img >= lo) & (img <= hi)
-
-    # Optional cleanup before labeling (helps tails stay connected)
+    # 2) Optional closing
     if close_px and int(close_px) > 0:
-        from scipy.ndimage import binary_closing
-        m = binary_closing(m, iterations=int(close_px))
+        m = ndi.binary_closing(m, iterations=int(close_px))
 
-    # Determine seed
-    H, W = img.shape
-    if seed == "center":
-        sy, sx = H // 2, W // 2
-    elif seed == "spot":
-        # Use spot_detect_and_qc to find a seed; fall back to center if it fails
-        try:
-            spot_out = spot_detect_and_qc(img, minmass=minmass, size=size)
-            arr = np.asarray(spot_out)
-            if arr.shape == img.shape:
-                flat = int(np.nanargmax(arr))
-                sy, sx = np.unravel_index(flat, arr.shape)
-            elif arr.size == 2:
-                sy, sx = int(np.round(arr[0])), int(np.round(arr[1]))
-            else:
-                sy, sx = H // 2, W // 2
-        except Exception:
-            sy, sx = H // 2, W // 2
-    else:
-        raise ValueError("seed must be 'spot' or 'center'")
+    # 3) Label connected components (8-connectivity)
+    structure = np.ones((3, 3), dtype=bool)
+    lab, nlab = ndi.label(m, structure=structure)
 
-    # Connected components
-    from skimage.measure import label, regionprops
-
-    lab = label(m, connectivity=2)
-    if lab.max() == 0:
+    if nlab == 0:
         out = np.zeros_like(m, dtype=bool)
         return out.astype(np.uint8) if return_uint8 else out
 
-    # Choose the component whose pixels are closest to the seed
-    best_label = None
-    best_d2 = None
+    # 4) Distance^2 map to crop center (computed once per call)
+    H, W = img.shape
+    sy, sx = H // 2, W // 2
+    yy, xx = np.ogrid[:H, :W]
+    d2 = (yy - sy) ** 2 + (xx - sx) ** 2
 
-    for rp in regionprops(lab):
-        coords = rp.coords  # (N,2) as (row,col)
-        dy = coords[:, 0] - sy
-        dx = coords[:, 1] - sx
-        d2 = float(np.min(dy * dy + dx * dx))
-        if best_d2 is None or d2 < best_d2:
-            best_d2 = d2
-            best_label = rp.label
+    # 5) For each label, find the minimum d2 among its pixels (C-speed)
+    labels = np.arange(1, nlab + 1, dtype=int)
+    min_d2 = ndi.minimum(d2, labels=lab, index=labels)
+
+    # 6) Choose best label
+    best_idx = int(np.argmin(min_d2))
+    best_label = int(labels[best_idx])
+    best_d2 = float(min_d2[best_idx])
 
     # Optional distance rejection
-    if max_dist_px is not None and best_d2 is not None:
-        if np.sqrt(best_d2) > float(max_dist_px):
-            out = np.zeros_like(m, dtype=bool)
-            return out.astype(np.uint8) if return_uint8 else out
+    if max_dist_px is not None and (best_d2 ** 0.5) > float(max_dist_px):
+        out = np.zeros_like(m, dtype=bool)
+        return out.astype(np.uint8) if return_uint8 else out
 
     out = (lab == best_label)
 
+    if smooth_px and smooth_px > 0:
+        from scipy.ndimage import binary_opening
+        out = binary_opening(
+            out,
+            structure=np.ones((2 * smooth_px + 1, 2 * smooth_px + 1))
+        )
+
     if fill_holes:
-        from scipy.ndimage import binary_fill_holes
-        out = binary_fill_holes(out)
+        out = ndi.binary_fill_holes(out)
 
     return out.astype(np.uint8) if return_uint8 else out
+
 
 
 
