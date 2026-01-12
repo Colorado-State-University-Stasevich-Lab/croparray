@@ -9,6 +9,3 @@ croparray.egg-info
 .ipynb_checkpoints
 # OS artifacts
 *:Zone.Identifier
-
-# Sphinx build artifacts
-docs/_build/
