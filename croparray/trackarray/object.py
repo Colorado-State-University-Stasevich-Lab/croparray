@@ -27,7 +27,7 @@ class TrackArray:
             raise ValueError("TrackArray dataset must have a 'track_id' dimension")
 
     def __repr__(self) -> str:
-        return f"TrackArray(tracks={self.ds.dims.get('track_id', '?')}, t={self.ds.dims.get('t', '?')})"
+        return f"TrackArray(ds={repr(self.ds)})"
 
     @property
     def track_ids(self):
@@ -40,23 +40,3 @@ class TrackArray:
     def to_xarray(self) -> xr.Dataset:
         """Return the underlying xarray.Dataset."""
         return self.ds
-
-    def _repr_html_(self) -> str:
-        # Jupyter/IPython rich display
-        try:
-            return self.ds._repr_html_()
-        except Exception:
-            # Fall back to plain repr if something odd happens
-            return f"<pre>{repr(self.ds)}</pre>"
-
-    def __getattr__(self, name):
-        """
-        Delegate attribute access to the underlying xarray.Dataset.
-        This makes ta.sel(...), ta.transpose(...), etc. work naturally.
-        """
-        return getattr(self.ds, name)
-
-    def __getitem__(self, key):
-        """Delegate ta['int'] etc. to the dataset."""
-        return self.ds[key]
-    
