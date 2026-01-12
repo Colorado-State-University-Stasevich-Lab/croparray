@@ -17,7 +17,7 @@ if import_libraries == 1:
     import pandas as pd
     import xarray as xr
     from scipy.ndimage import gaussian_filter1d
-#    import trackpy as tp
+    import trackpy as tp
     import matplotlib.pyplot as plt 
     from matplotlib import gridspec
 #    import napari
@@ -40,9 +40,7 @@ from .tracking import (
 from .trackarray.build import track_array
 from .trackarray.dataframe import create_tracks_df, track_signals_to_df
 from .trackarray.napari_view import display_cell_and_tracks
-from .crop_ops.measure import spot_detect_and_qc
-from .raw.detect import detecting_spots
-from .raw.track import tracking_spots
+
 
 
 
@@ -118,5 +116,44 @@ def plot_normalized_best_z_raw(ds, figsize=(20, 15)):
     plt.show()
 
 
+
+def spot_detect_and_qc(img, minmass=6000, size=5):
+    """
+    Locates features in an image using trackpy locate function and creates a new image with a pixel at the location of the feature closest to the center. This pixel has the signal value of the feature.
+
+    This function is used to identify and highlight the location of features in an image. This is useful for visualizing the features and their signal values from an croparray dataset with padding. This function can be used to identify or quality control the features in the image such as mRNA and translation spots.
+
+    Parameters:
+    img (numpy.ndarray): The input image.
+    minmass (int, optional): The minimum integrated brightness. Defaults to 6000.
+    size (int, optional): The size of the features in pixels. Defaults to 5.
+
+    Returns:
+    numpy.ndarray: A new image of the same size as the input image, with a pixel at the location of the feature closest to the center. The pixel value is the signal value of the feature.
+
+    """
+    features = tp.locate(img, size, minmass)
+    new_img = np.zeros_like(img)
+    if len(features) > 0:
+        # Calculate the center of the image
+        center_x = img.shape[1] / 2
+        center_y = img.shape[0] / 2
+
+        if len(features) > 1:
+            # Calculate the Euclidean distance from each feature to the center
+            distances = np.sqrt((features['x'] - center_x)**2 + (features['y'] - center_y)**2)
+            # Find the index of the feature with the smallest distance
+            closest_index = np.argmin(distances)
+            x_value = features['x'].values[closest_index]
+            y_value = features['y'].values[closest_index]
+            signal_value = features['signal'].values[closest_index]
+        else:
+            x_value = features['x'].values[0]
+            y_value = features['y'].values[0]
+            signal_value = features['signal'].values[0]
+
+        # Set the pixel at (x_value, y_value) to the maximum pixel value
+        new_img[int(y_value), int(x_value)] = signal_value
+    return new_img
 
 
