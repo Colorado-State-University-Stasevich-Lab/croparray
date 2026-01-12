@@ -163,22 +163,9 @@ class CropArrayTrack(_BaseAccessor):
 
 @dataclass
 class TrackArrayPlot(_BaseAccessor):
-    """
-    Plotting utilities for TrackArray datasets.
-
-    Wraps functions implemented in croparray/trackarray/plot.py.
-    """
-
-    # Optional: keep for future generic delegation if you want it later
-    _delegate_module: Optional[str] = ".trackarray.plot"
-
-    def plot_trackarray_crops(self, *args, **kwargs):
-        from .trackarray.plot import plot_trackarray_crops
-        return plot_trackarray_crops(self.ds, *args, **kwargs)
-
-    def plot_track_signal_traces(self, *args, **kwargs):
-        from .trackarray.plot import plot_track_signal_traces
-        return plot_track_signal_traces(self.ds, *args, **kwargs)
+    # placeholder for trackarray plot utilities once you add them
+    # Set this later when you create the module, e.g. ".track_plot"
+    _delegate_module: Optional[str] = None
 
 
 @dataclass
