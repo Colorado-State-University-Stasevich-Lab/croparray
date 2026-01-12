@@ -213,50 +213,48 @@ def plot_trackarray_crops(
 def plot_track_signal_traces(
     ta_dataset,
     track_ids,
-    var: str = "signal",
     rgb=(1, 1, 1),
     colors=("#00f670", "#f67000", "#7000f6"),
-    markers=("o", "s", "D"),
-    marker_size=6,
-    scatter_size=25,
-    markevery=5,
+    markers=("o", "s", "D"),      # marker per channel
+    marker_size=6,                # <-- NEW: line marker size
+    scatter_size=25,              # <-- NEW: scatter marker area (points^2)
+    markevery=5,                  # <-- NEW: show every Nth marker on lines
     figsize=(7, 2.8),
     ylim=None,
     xlim=None,
     col_wrap=3,
-    y2=None,
-    y2lim=None,
-    y2_label=None,
-    legend_loc="upper right",
-    show_legend=True,
+    y2=None,                      # channel index for right axis
+    y2lim=None,                   # right-axis limits
+    y2_label=None,                # right-axis label
+    legend_loc="upper right",     # or "outside"
+    show_legend=True
 ):
     """
-    Plot per-track traces for a chosen variable (default: 'signal') in a subplot grid.
+    Plot signal traces for a list of track_ids in a subplot grid layout.
     Optionally place one channel on a secondary (right) y-axis.
 
-    Parameters
-    ----------
-    ta_dataset : xarray.Dataset
-        TrackArray dataset containing `var` with dims including (track_id, t) and usually (ch).
-    track_ids : list[int]
-        Track IDs to plot.
-    var : str, default "signal"
-        Variable name to plot (e.g. "signal", "signal_raw", "ID", "MEAN_INTENSITY").
-    rgb : tuple[int,int,int] or None, default (1,1,1)
-        Channel inclusion mask for left axis (unless a channel is assigned to y2).
-        If None, plot all channels.
-    colors, markers, marker_size, scatter_size, markevery, figsize, ylim, xlim, col_wrap, y2, y2lim, y2_label,
-    legend_loc, show_legend : see previous docstring.
+    Parameters:
+    - ta_dataset: xarray Dataset with 'signal' variable
+    - track_ids (list[int]): track IDs to plot
+    - rgb (tuple[int,int,int]): e.g., (1, 0, 1) = plot ch 0 and 2 on left axis unless one is y2
+    - colors (list[str]): color for each channel index
+    - figsize (tuple): size of each individual subplot
+    - ylim (tuple or None): y-axis limits for left axis
+    - xlim (tuple or None): x-axis limits for both axes
+    - col_wrap (int): number of subplots per row
+    - y2 (int or None): channel index to draw on right axis
+    - y2lim (tuple or None): y-axis limits for right axis
+    - y2_label (str or None): label for right axis
+    - Each channel can have its own color and marker.
+    - Right y-axis colored to match its channel.
+    - Legend placement: 'upper right', 'lower left', 'outside', etc.
+    - marker_size controls line markers; scatter_size controls mean-point scatter.
     """
     from ..dataframe import variables_to_df
     import math
     import seaborn as sns
-    import matplotlib.pyplot as plt
 
-    if var not in ta_dataset:
-        raise KeyError(f"Dataset does not contain variable '{var}'")
-
-    df = variables_to_df(ta_dataset, [var])
+    sig_df = variables_to_df(ta_dataset, ['signal'])
 
     sns.set_style("whitegrid")
     sns.set(font_scale=1.1)
@@ -269,107 +267,83 @@ def plot_track_signal_traces(
         nrows=nrows,
         ncols=ncols,
         figsize=(figsize[0] * ncols, figsize[1] * nrows),
-        squeeze=False,
+        squeeze=False
     )
 
     # Ensure markers covers all channels
     if len(markers) < len(colors):
         markers = list(markers) + ["o"] * (len(colors) - len(markers))
 
-    def _rgb_on(ch: int) -> bool:
-        if rgb is None:
-            return True
-        if ch < len(rgb):
-            return bool(rgb[ch])
-        return False
-
     for idx, track_id in enumerate(track_ids):
         row, col = divmod(idx, col_wrap)
         ax = axes[row][col]
         ax2 = ax.twinx() if y2 is not None else None
 
+        # Plot each channel
         for ch in range(len(colors)):
-            if not (_rgb_on(ch) or (y2 == ch)):
+            if not ((rgb[ch] == 1) or (y2 == ch)):
                 continue
 
             color = colors[ch]
             marker = markers[ch]
-
-            subset = df[(df["track_id"] == track_id) & (df["ch"] == ch)]
+            subset = sig_df[(sig_df['track_id'] == track_id) & (sig_df['ch'] == ch)]
             if subset.empty:
                 continue
 
             target_ax = ax2 if (y2 is not None and ch == y2) else ax
 
+            # Line with markers (disable seaborn's auto-legend)
             sns.lineplot(
-                data=subset,
-                x="t",
-                y=var,
-                ax=target_ax,
-                color=color,
-                label=f"ch {ch}",
-                lw=2,
-                dashes=False,
-                legend=False,
-                marker=marker,
-                markersize=marker_size,
-                markevery=markevery,
+                data=subset, x="t", y="signal", ax=target_ax,
+                color=color, label=f"ch {ch}",
+                lw=2, dashes=False, legend=False,
+                marker=marker, markersize=marker_size, markevery=markevery
             )
 
-            mean_df = subset.groupby("t")[var].mean().reset_index()
+            # Mean points (also not in legend)
+            mean_df = subset.groupby('t')['signal'].mean().reset_index()
             sns.scatterplot(
-                data=mean_df,
-                x="t",
-                y=var,
-                ax=target_ax,
-                color=color,
-                s=scatter_size,
-                legend=False,
+                data=mean_df, x="t", y="signal", ax=target_ax,
+                color=color, s=scatter_size, legend=False
             )
 
+        # Axis labels and limits
         ax.set_title(f"Track {int(track_id)}")
         ax.set_xlabel("time (sec)")
-        ax.set_ylabel(f"{var} (a.u.)")
-        if ylim:
-            ax.set_ylim(ylim)
-        if xlim:
-            ax.set_xlim(xlim)
+        ax.set_ylabel("intensity (a.u.)")
+        if ylim: ax.set_ylim(ylim)
+        if xlim: ax.set_xlim(xlim)
 
+        # Right axis styling
         if ax2 is not None:
             right_color = colors[y2 % len(colors)]
-            ax2.set_ylabel(y2_label or f"{var} (a.u.) [ch {y2}]", color=right_color)
-            if y2lim:
-                ax2.set_ylim(y2lim)
-            if xlim:
-                ax2.set_xlim(xlim)
-            ax2.tick_params(axis="y", colors=right_color)
-            ax2.spines["right"].set_color(right_color)
+            ax2.set_ylabel(y2_label or f"intensity (a.u.) [ch {y2}]", color=right_color)
+            if y2lim: ax2.set_ylim(y2lim)
+            if xlim:  ax2.set_xlim(xlim)
+            ax2.tick_params(axis='y', colors=right_color)
+            ax2.spines['right'].set_color(right_color)
 
+        # One combined legend per subplot
         if show_legend:
             h1, l1 = ax.get_legend_handles_labels()
             h2, l2 = (ax2.get_legend_handles_labels() if ax2 else ([], []))
             handles, labels = h1 + h2, l1 + l2
 
             if legend_loc == "outside":
-                ax.legend(
-                    handles,
-                    labels,
-                    loc="upper left",
-                    bbox_to_anchor=(1.15, 1.0),
-                    borderaxespad=0.0,
-                    frameon=True,
-                )
+                ax.legend(handles, labels, loc='upper left',
+                          bbox_to_anchor=(1.15, 1.0),
+                          borderaxespad=0., frameon=True)
             else:
                 ax.legend(handles, labels, loc=legend_loc, frameon=True)
         else:
-            if ax.get_legend():
-                ax.get_legend().remove()
+            if ax.get_legend(): ax.get_legend().remove()
 
     # Hide unused subplots
-    for j in range(n, nrows * ncols):
-        r, c = divmod(j, col_wrap)
-        fig.delaxes(axes[r][c])
+    for idx in range(n, nrows * ncols):
+        row, col = divmod(idx, col_wrap)
+        fig.delaxes(axes[row][col])
 
+    # More room for outside legends
     if legend_loc == "outside":
         fig.subplots_adjust(right=0.82)
 
