@@ -1,5 +1,5 @@
 # croparray
-Authors: Tim Stasevich.
+Authors: Tim Stasevich and Luis Alguilera.
 
 ## Description
 This module is intended for creating and manipulating an array of crops (or regions of interest) that were generated from a multicolor TIF video obtained from single-molecule microscopy.
