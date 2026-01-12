@@ -3,8 +3,7 @@ from dataclasses import dataclass
 
 import xarray as xr
 
-from .tracking import to_track_array as _to_track_array
-
+from . import crop_array_tools as ca
 
 @dataclass
 class CropArray:
@@ -19,10 +18,6 @@ class CropArray:
 
     def __getattr__(self, name: str):
         return getattr(self.ds, name)
-
-    def to_xarray(self):
-        """Return the underlying xarray.Dataset."""
-        return self.ds
 
     def best_z_proj(self, ref_ch: int = 0, disk_r: int = 1, roll_n: int = 1):
         """
@@ -44,9 +39,7 @@ class CropArray:
             Best-z projection with dims like (fov, n, f, y, x, ch). Also augments
             the underlying dataset by adding/overwriting `ds['zc']`.
         """
-        from .measure import best_z_proj
-        out = best_z_proj(self.ds, ref_ch=ref_ch, disk_r=disk_r, roll_n=roll_n)
-
+        out = ca.best_z_proj(self.ds, ref_ch=ref_ch, disk_r=disk_r, roll_n=roll_n)
         self.ds["best_z"] = out
         return out
     
@@ -80,8 +73,7 @@ class CropArray:
         CropArray
             Self, with `ds` augmented (e.g., adds `best_z`, `signal`, etc.).
         """
-        from .measure import measure_signal
-        ds2 = measure_signal(
+        ds2 = ca.measure_signal(
             self.ds,
             ref_ch=ref_ch,
             disk_r=disk_r,
@@ -89,30 +81,6 @@ class CropArray:
             roll_n=roll_n,
             **kwargs
         )
-
         if isinstance(ds2, xr.Dataset) and ds2 is not self.ds:
             self.ds = ds2
         return self
-    
-    def to_trackarray(
-    self,
-    channel_to_track: int = 0,
-    min_track_length: int = 5,
-    search_range: int = 10,
-    memory: int = 1,
-    ):
-        """
-        Track particles in this CropArray and return a TrackArray object.
-
-        Notes
-        -----
-        This overwrites `self.ds['id']` to store track IDs (0 indicates untracked/filtered).
-        The original `id` is preserved in `spot_id` the first time tracking is run.
-        """
-        return _to_track_array(
-            self.ds,
-            channel_to_track=channel_to_track,
-            min_track_length=min_track_length,
-            search_range=search_range,
-            memory=memory,
-        )
