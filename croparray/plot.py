@@ -1,13 +1,3 @@
-"""
-Plotting utilities for croparray.
-
-Conventions:
-- All functions here are pure (no CropArray mutation).
-- Dataset-aware functions accept `ds` explicitly.
-- Generic helpers accept arrays/images and are auto-exposed via CropArrayPlot.
-"""
-
-
 import numpy as np
 import xarray as xr
 
