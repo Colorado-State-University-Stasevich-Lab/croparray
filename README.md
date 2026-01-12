@@ -4,96 +4,120 @@ Authors: Tim Stasevich.
 ## Description
 This module is intended for creating and manipulating an array of crops (or regions of interest) that were generated from a multicolor TIF video obtained from single-molecule microscopy.
 
-<img src="https://github.com/Colorado-State-University-Stasevich-Lab/croparray/raw/main/docs/images/Fig1-CropArrayConceptV4.png" alt="drawing" width="600"/>
+<img src= https://github.com/Colorado-State-University-Stasevich-Lab/croparray/raw/main/docs/images/Fig1-CropArrayConceptV4.png alt="drawing" width="600"/>
 
-## Documentation
-* Documentation is accessible via [croparray.readthedocs](https://croparray.readthedocs.io)
+
+## Documentation 
+* Documentation is accessible via [croparray.readthedocs](https://croparray.readthedocs.io) 
 
 ## Colab implementation
-* Implementation in Google Colab  
-  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1Ru-_ak9PpW9bGM_H9SlffmdDQOxG16-4?usp=sharing)
 
-<img src="https://github.com/Colorado-State-University-Stasevich-Lab/croparray/raw/main/docs/images/Croparray.gif" alt="drawing" width="1000"/>
+ * Implementation in Google Colab [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]( https://colab.research.google.com/drive/1Ru-_ak9PpW9bGM_H9SlffmdDQOxG16-4?usp=sharing)
 
----
+<img src= https://github.com/Colorado-State-University-Stasevich-Lab/croparray/raw/main/docs/images/Croparray.gif alt="drawing" width="1000"/>
 
-## Local installation from the GitHub repository (Recommended)
+## Local installation from the Github repository
 
-This is the **recommended and most reliable installation method**, especially if you plan to use Napari.
+* Install [anaconda](https://anaconda.org).
 
-### 1. Install Conda
-Install Anaconda or Miniconda from:  
-https://www.anaconda.com
-
-### 2. Clone the GitHub repository
+* Clone the Github repository
 ```bash
-git clone https://github.com/Colorado-State-University-Stasevich-Lab/croparray.git
-cd croparray
+    git clone https://github.com/Colorado-State-University-Stasevich-Lab/croparray.git
 ```
 
-### 3. Create the environment from `environment.yml`
+* To create a virtual environment navigate to your local repository and use:
 ```bash
-conda env create -f environment.yml
-conda activate croparray_env
-```
-> **Note on Napari compatibility**  
-> The provided `environment.yml` pins Napari to a version range (`>=0.6,<0.7`) that is known to be compatible with Python 3.10 and stable under Linux/WSL.  
-> If you modify the environment or Python version, ensure that Napari remains compatible.
-
-
-### 4. Install croparray (editable mode)
-```bash
-python -m pip install -e . --no-deps
+    conda create -n croparray_env python=3.8 -y
+    source activate croparray_env
 ```
 
-### 5. (Optional) Register the Jupyter kernel (recommended for VS Code / notebooks)
+* To install the rest of requirements use:
 ```bash
-python -m ipykernel install --user --name croparray_env --display-name "Python (croparray_env)"
+    python3 -m pip install -r requirements.txt
 ```
 
----
-### 6. Verify the installation
+* To install napari use:
 ```bash
-python -c "import croparray, napari; print('croparray OK, napari', napari.__version__)"
+    python3 -m pip install "napari[all]"
+```
+* To ensure the docstrings of functions in crop_array_tools.py appear in jupyter notebooks that import crop_array_tools:
+```sh
+conda develop .\croparray\
 ```
 
+* To install Pytorch for GPU usage in Cellpose (Optional step). Only for **Linux and Windows users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
+```sh
+ conda install pytorch cudatoolkit=10.2 -c pytorch -y
+```
+* To install Pytorch for CPU usage in Cellpose (Optional step). Only for **Mac users** check the specific version for your computer on this [link]( https://pytorch.org/get-started/locally/) :
+```sh
+ conda install pytorch -c pytorch
+```
+
+## Local installation using PIP
+
+* To create a virtual environment using:
+
+```bash
+    conda create -n croparray_env python=3.8 -y
+    source activate croparray_env
+```
+
+* Open the terminal and use [pip](https://pip.pypa.io/en/stable/) for the installation:
+```bash
+    python3 -m pip install croparray
+```
+
+* To install napari use:
+```bash
+    python3 -m pip install "napari[all]"
+```
+
+## Deactivating and removing the environment
+
+* To deactivate or remove the environment from your computer use:
+```bash
+    conda deactivate
+```
+* To remove the environment use:
+```bash
+    conda env remove -n croparray_env
+```
+* To unistall croparray use
+```bash
+    pip uninstall croparray
+```
+
+## additional troubleshooting information
+* If you cannot see the package installed on your computer, try using ```pip3```. For example: 
+```bash
+    pip3 install croparray
+```
+
+## Installing from yml env
+
+* To creating an environment file (yml) use:
+```sh
+source activate croparray_env
+conda env export > croparray_env.yml
+```
+
+* ToCreate an environment from this yml file.
+```sh
+conda env create -f croparray_env.yml
+```
 
 ## Usage
 
-* Organizes crops and measurements of spots of interest from tif images in a convenient xarray format for reduced file size and more open and reproducible analyses.
+* Organizes crops and measurements of spots of interest from tif images in a convenient x-array format for reduced filesize and more open and reproducible analyses.
 * Visualizes crops of detected spots from super-resolution microscope images.
 * Calculates the best maximum projection for each crop containing a detected spot.
 * Measures intensity of detected spots within crops.
 * Calculates the correlation between two equal-length, 1D signals.
-* Saves the crop array as a NetCDF file at `output_directory/output_filename`.
+* Saves the crop array as a netcdf file at output_direction/output_filename.
 * Integrates with Napari for fast and convenient review of crops of detected spots.
 
----
-
-## Deactivating and removing the environment
-
-* Deactivate the environment:
-```bash
-conda deactivate
-```
-
-* Remove the environment:
-```bash
-conda env remove -n croparray_env
-```
-
-* Uninstall croparray:
-```bash
-pip uninstall croparray
-```
-
----
-
 ## Licenses for dependencies
+- License for [Napari](https://github.com/napari/napari): BSD-3-Clause License. Copyright (c) 2018, Napari. All rights reserved.
 
-- License for [Napari](https://github.com/napari/napari): BSD-3-Clause License.  
-  Copyright (c) 2018, Napari.
-
-- License for [xarray](https://github.com/pydata/xarray): Apache License 2.0.  
-  Copyright 2014–2019, xarray Developers.
-
+- License for [xarray](https://github.com/pydata/xarray): Apache License. Version 2.0, January 2004. Copyright 2014-2019, xarray Developers
