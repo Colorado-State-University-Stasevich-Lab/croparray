@@ -80,7 +80,7 @@ def to_track_array(ca, channel_to_track, min_track_length, search_range, memory)
     track_id_array = dft_filtered['track_id'].to_xarray()
     ca['id'] = track_id_array
     
-    return track_array(ca, as_object=True)  # outputed track!
+    return track_array(ca)  # outputed track!
 
 # Detecting particles for each frame
 def tracking_spots(img,particle_diameter=5,max_distance_movement=5,min_trajectory_length=5, num_iterations = 100,show_plots=True):
