@@ -35,12 +35,7 @@ class TrackArray:
         self.df = TrackArrayDF(self)
 
     def __repr__(self) -> str:
-        sizes = self.ds.sizes
-        return (
-            f"TrackArray("
-            f"tracks={sizes.get('track_id', '?')}, "
-            f"t={sizes.get('t', '?')})"
-        )
+        return f"TrackArray(tracks={self.ds.dims.get('track_id', '?')}, t={self.ds.dims.get('t', '?')})"
 
     @property
     def track_ids(self):
