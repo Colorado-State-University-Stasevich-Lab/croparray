@@ -30,7 +30,6 @@ class CropArray:
             CropArrayView,
             CropArrayDF,
             CropArrayTrack,
-            CropArrayOps,
         )
 
         self.io = CropArrayIO(self)
@@ -40,7 +39,6 @@ class CropArray:
         self.view = CropArrayView(self)
         self.df = CropArrayDF(self)
         self.track = CropArrayTrack(self)
-        self.ops = CropArrayOps(self)
 
     
     def __getitem__(self, key: str):
