@@ -28,8 +28,6 @@ if import_libraries == 1:
 from .io import open_croparray, open_croparray_zarr
 from .build import _create_crop_array_dataset, create_crop_array
 from .measure import best_z_proj, measure_signal, measure_signal_raw
-from .plot import montage
-from .napari_view import view_montage
 
 
 
@@ -48,6 +46,119 @@ def print_banner():
 
 
 
+
+# Make various montages of crop array for easy viewing in napari
+def montage(ca, **kwargs):
+    '''
+    Returns a montage of a crop array for easier visualizaton.
+
+    Parameters
+    ----------
+    ca: crop arrray (x-array dataset)
+        A crop array.
+    col: string (optional) 
+        String specifying crop array coordinate to arrange in columns, either 'fov', 'n', or 't' (default). 
+    row: string (optional) 
+        String specifying crop array coordinate to arrange in rows, either 'fov', 'n' (default), or 't'. 
+
+    Returns
+    -------
+    A reshaped crop array in which individual crops are arranged in a two-dimensional array of dimensions row x col. If kwarg coordinates for row and col are the same, a two dimensional array of dimensions sqrt(row) x sqrt(row) is returned.   
+    '''
+    # Get the optional key word arguments (kwargs):
+    col = kwargs.get('col', 't')
+    row = kwargs.get('row', 'n') 
+
+    if row != col: # arrange crops in rows and columns in the xy plane 
+        output = ca.stack(r=(row,'y'),c=(col,'x')).transpose('cell','rep','exp','tracks','fov','n','t','z','r','c','ch', missing_dims='ignore') 
+
+    if row == col:  # arrange crops in square col x col montage in the xy-plane
+        col_length = len(ca.coords.get(col))
+        my_sqrt = np.sqrt(col_length) # How big a square do we need to make?
+        remainder = my_sqrt % 1
+        if remainder == 0: 
+            my_size = int(my_sqrt) # montage square will be (my_size x my_size)
+        else:
+            my_size = int(np.floor(my_sqrt) + 1) # montage square will be (my_size + 1) x (my_size + 1)
+        # pad w/ 0 so there are enough crops to fill a perfect my_size x my_size square
+        pad_amount = my_size*my_size - col_length
+        # Reshape dataset so 'col' coordinates is rearranged into a perfect square.
+        # See https://stackoverflow.com/questions/59504320/how-do-i-subdivide-refine-a-dimension-in-an-xarray-dataset/59685729#59685729 for details
+        output = ca.pad(pad_width={col:(0,pad_amount)}, mode='constant', constant_values = 0  # !!! Careful, ds.pad may change in future x-array
+        ).assign_coords(montage_row = np.arange(my_size), montage_col = np.arange(my_size)
+        ).stack(montage = ('montage_row', 'montage_col') # make montage_row x montage_col stacked coordinates
+        ).reset_index(col, drop=True  # remove 'col' coordinate, but keep in individual x-arrays in dataset
+        ).rename({col:'montage'}  # rename 'col' dimension in x-arrays to 'montage'
+        ).unstack(                # unstack the montage_row and montage_col coordinates    
+        ).stack(r=('montage_row','y'), c=('montage_col','x')  # Arrange crops in c x r square in xy-plane
+        ).transpose('cell','rep','exp','tracks','fov','n','t','z','r','c','ch',missing_dims='ignore') # Ensure standard crop array ordering
+
+    return output
+
+def view_montage(my_ca_montage):
+    """
+    Display a montage of images in Napari based on the number of channels.
+
+    Parameters:
+    my_ca_montage (xarray.DataArray or xarray.Dataset): The input dataset with channel information.
+    """
+    num_channels = len(my_ca_montage.ch.values)
+    
+    # Initialize the Napari viewer
+    viewer = napari.Viewer()
+
+    if num_channels == 3:
+        viewer.add_image(
+            my_ca_montage.sel(ch=0).best_z, 
+            colormap='red', 
+            name='Channel 1', 
+            blending='additive', 
+            contrast_limits=[0, my_ca_montage.sel(ch=0).best_z.quantile(0.9995).values]
+        )
+        viewer.add_image(
+            my_ca_montage.sel(ch=1).best_z, 
+            colormap='green', 
+            name='Channel 2', 
+            blending='additive', 
+            contrast_limits=[0, my_ca_montage.sel(ch=1).best_z.quantile(0.9995).values]
+        )
+        viewer.add_image(
+            my_ca_montage.sel(ch=2).best_z, 
+            colormap='blue', 
+            name='Channel 3', 
+            blending='additive', 
+            contrast_limits=[0, my_ca_montage.sel(ch=2).best_z.quantile(0.9995).values]
+        )
+    
+    elif num_channels == 2:
+        viewer.add_image(
+            my_ca_montage.sel(ch=0).best_z, 
+            colormap='magenta', 
+            name='Channel 1', 
+            blending='additive', 
+            contrast_limits=[0, my_ca_montage.sel(ch=0).best_z.quantile(0.9995).values]
+        )
+        viewer.add_image(
+            my_ca_montage.sel(ch=1).best_z, 
+            colormap='green', 
+            name='Channel 2', 
+            blending='additive', 
+            contrast_limits=[0, my_ca_montage.sel(ch=1).best_z.quantile(0.9995).values]
+        )
+
+    elif num_channels == 1:
+        viewer.add_image(
+            my_ca_montage.sel(ch=0).best_z, 
+            colormap='green', 
+            name='Channel 1', 
+            blending='additive', 
+            contrast_limits=[0, my_ca_montage.sel(ch=0).best_z.quantile(0.9995).values]
+        )
+    
+    else:
+        raise ValueError(f"Unsupported number of channels: {num_channels}")
+
+    return viewer
 
 # Pull out variables in a crop array to a dataframe
 def variables_to_df(ca, var_names):
