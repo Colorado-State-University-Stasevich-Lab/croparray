@@ -7,5 +7,3 @@ dist
 croparray.egg-info
 ~$*
 .ipynb_checkpoints
-# OS artifacts
-*:Zone.Identifier

@@ -20,10 +20,6 @@ if import_libraries == 1:
     import trackpy as tp
     import matplotlib.pyplot as plt 
     from matplotlib import gridspec
-    import napari
-    import seaborn as sns
-    import math
-    # from napari.utils import nbscreenshot
 
 
 ##### Modules
@@ -38,7 +34,8 @@ def print_banner():
         "                                     by : Luis Aguilera and Tim Stasevich \n\n"        )
 
 
-def _create_crop_array_dataset(video, df, **kwargs): 
+
+def create_crop_array(video, df, **kwargs): 
     """
     Creates a crop x-array from a tif video and a dataframe containing the ids and coordinates of spots of interest. Cropping is only performed in the lateral xy-plane (so each crop has all z-slices in the video). Padding in the xy-plane by zeros is added to create crops for spots that are too close to the edge of the video. 
     Parameters
@@ -49,7 +46,7 @@ def _create_crop_array_dataset(video, df, **kwargs):
         A dataframe with the ids and coordinates of selected spots for making crops from video. Minimally, the dataframe must have 5 columns (1) 'fov': the fov number for each spot; can also be a filename for each fov. (2) 'id': the integer id of each spot. (3) 'f': integer frame number of each spot starting from zero. (4) 'yc': the lateral y-coordinate of the spot for centering the crop in y, (5) 'xc': the lateral x-coodinate of the spot for centering the crop in x. Any additional columns must be numeric and will be automatically converted to individual x-arrays in the crop array dataset that have the column header as a name.
     xy_pad: int, optional
         The amount of pixels to pad the centered pixel for each crop in the lateral x and y directions. Note the centered pixel is defined as the pixel containing the coordinates (xc, yc) for each crop. As an example, if xy_pad = 5, then each crop in the crop array will have x and y dimensions of 11 = 2*xy_pad + 1.
-    dx: int, optional
+    dz: int, optional
         The size of pixels in the x-direction.
     dy: int, optional 
         The size of pixels in the y-direction.   
@@ -62,7 +59,7 @@ def _create_crop_array_dataset(video, df, **kwargs):
     video_date: str, optional
         The date the video was acquired, in the form 'yyyy-mm-dd'.
     homography: numpy array, optional
-        A list of 3x3 transformation matrices, one for each channel. This is to correct for any misalignments between channels. If a channel is not be adjusted, the unit 3 x 3 matrix can be used.   
+        A 3x3 transformation matrix that corrects for the misalignment of channel 0 to the other channels in the video.  
     Returns
     ---------
     A crop x-array dataset ca (i.e. crop array) containing 9 default x-arrays (+ optional x-arrays based on optional inputted df columns).
@@ -90,7 +87,7 @@ def _create_crop_array_dataset(video, df, **kwargs):
         A 1D arary containing dt.
     7. ca.dz -- dims: (); attributes: 'units'; float
         A 1D arary containing dz.
-    8. ca.dy -- dims: (); attributes: 'units'; float
+    9. ca.dy -- dims: (); attributes: 'units'; float
         A 1D arary containing dy.
     9. ca.dx -- dims: (); attributes: 'units'; float
         A 1D arary containing dx.
@@ -104,14 +101,13 @@ def _create_crop_array_dataset(video, df, **kwargs):
     units = kwargs.get('units',['space','time'])
     name = kwargs.get('name', 'video_filename')
     date = kwargs.get('date', 'video_date') 
+    # Get homography matrix; default is a 3D identity matrix for transformating x, y, and z
+    homography = kwargs.get('homography', np.eye(3))
 
     # Get dimensions of video
     n_fov, n_frames, z_slices, height_y, width_x, n_channels = list(video.shape)
     print('Original video dimensions: ', video.shape)
 
-    # Get homography matrix; default is a 3D identity matrix for transformating x, y, and z
-    homography = kwargs.get('homography', [np.eye(3) for i in np.arange(n_channels)])
-    
     # Pad video in xy-lateral direction by xy_pad so crops can be made for all spots
     npad = ((0,0),(0,0), (0,0), (xy_pad+1,xy_pad+1), (xy_pad+1,xy_pad+1), (0,0))
     video = np.pad(video, pad_width=npad, mode='constant', constant_values=0)
@@ -163,10 +159,13 @@ def _create_crop_array_dataset(video, df, **kwargs):
             my_x = np.zeros((n_channels, len(my_ns)))
             my_y = np.zeros((n_channels, len(my_ns)))
             # correct (x,y) coordinates of all crops at my_f and my_fov using homography matrix
-            # use the list of homography matrices to correct channels )        
+            # use the homography to correct channels 1 and 2 (assumed channel 0 is red channel)        
             for ch in np.arange(n_channels):
-                if len(my_spots)>0:   # correct other channels using same homography (since green/blue are image on same camera)
-                    temp = [list(np.dot(homography[ch],np.array([pos[0],pos[1],1]))[0:2]) 
+                if ch == 0 & len(my_spots)>0:  # don't correct channel 0
+                    my_x[ch] = (my_spots['xc'] + xy_pad + 1).round(0).values.astype(np.int16)
+                    my_y[ch] = (my_spots['yc'] + xy_pad + 1).round(0).values.astype(int)
+                elif len(my_spots)>0:   # correct other channels using same homography (since green/blue are image on same camera)
+                    temp = [list(np.dot(homography,np.array([pos[0],pos[1],1]))[0:2]) 
                             for pos in my_spots[['xc','yc']].values]
                     my_x[ch], my_y[ch] = np.array(temp).T
                     my_x[ch] = (my_x[ch] + xy_pad + 1).round(0).astype(int)
@@ -223,156 +222,6 @@ def _create_crop_array_dataset(video, df, **kwargs):
     attrs = {'name': name, 'date': date}
     )
     return ds
-    
-
-def create_crop_array(video, df, as_object: bool = True, **kwargs):
-    """
-    Build a crop-array from raw inputs.
-
-    Parameters
-    ----------
-    video
-        Input video array.
-    df
-        Spot / crop definition table.
-    as_object : bool, default True
-        If True, return a CropArray wrapper (method-style API).
-        If False, return the raw xarray.Dataset (legacy behavior).
-    **kwargs
-        Passed through to the dataset construction logic.
-
-    Returns
-    -------
-    CropArray or xarray.Dataset
-    """
-    ds = _create_crop_array_dataset(video, df, **kwargs)
-
-    if as_object:
-        # Local import avoids circular dependency
-        from .crop_array_object import CropArray
-        return CropArray(ds)
-
-    return ds
-
-
-import xarray as xr
-
-
-def open_croparray(path: str, as_object: bool = True, **kwargs):
-    """
-    Open a saved CropArray dataset and optionally wrap it as a CropArray object.
-
-    This function uses ``xarray.open_dataset`` and is suitable for CropArrays
-    stored in NetCDF or other formats supported by xarray. For large or
-    chunked datasets, consider using :func:`open_croparray_zarr`.
-
-    Parameters
-    ----------
-    path : str
-        Path to a dataset readable by ``xarray.open_dataset`` (e.g. NetCDF).
-    as_object : bool, default True
-        If True, return a ``CropArray`` wrapper providing the method-style API
-        (e.g. ``ca.best_z_proj()``, ``ca.measure_signal()``).
-        If False, return the raw ``xarray.Dataset``.
-    **kwargs
-        Additional keyword arguments passed directly to
-        ``xarray.open_dataset`` (e.g. ``engine``, ``chunks``).
-
-    Returns
-    -------
-    CropArray or xarray.Dataset
-        If ``as_object=True``, returns a ``CropArray`` wrapping the opened
-        dataset. Otherwise, returns the underlying ``xarray.Dataset``.
-
-    Notes
-    -----
-    Datasets opened with ``open_croparray`` may be loaded eagerly or lazily
-    depending on the file format and the arguments passed to
-    ``xarray.open_dataset``.
-
-    Examples
-    --------
-    Open a CropArray from a NetCDF file and compute best-z projections::
-
-        from croparray import open_croparray
-
-        ca = open_croparray("my_croparray.nc")
-        ca.best_z_proj()
-        ca.measure_signal()
-
-    Open the raw Dataset without wrapping::
-
-        ds = open_croparray("my_croparray.nc", as_object=False)
-    """
-    ds = xr.open_dataset(path, **kwargs)
-
-    if as_object:
-        # Local import avoids circular dependency
-        from .crop_array_object import CropArray
-        return CropArray(ds)
-
-    return ds
-
-
-
-
-def open_croparray_zarr(store: str, as_object: bool = True, **kwargs):
-    """
-    Open a saved CropArray stored in Zarr format and optionally wrap it as a
-    CropArray object.
-
-    This function mirrors :func:`open_croparray`, but uses
-    ``xarray.open_zarr`` instead of ``xarray.open_dataset``. It is intended
-    for large crop arrays that benefit from chunked, lazy loading.
-
-    Parameters
-    ----------
-    store : str
-        Path to the Zarr store (directory or consolidated Zarr archive).
-    as_object : bool, default True
-        If True, return a ``CropArray`` wrapper providing the method-style API
-        (e.g. ``ca.best_z_proj()``, ``ca.measure_signal()``).
-        If False, return the raw ``xarray.Dataset``.
-    **kwargs
-        Additional keyword arguments passed directly to
-        ``xarray.open_zarr`` (e.g. ``consolidated=True``).
-
-    Returns
-    -------
-    CropArray or xarray.Dataset
-        If ``as_object=True``, returns a ``CropArray`` wrapping the opened
-        dataset. Otherwise, returns the underlying ``xarray.Dataset``.
-
-    Notes
-    -----
-    Zarr-backed CropArrays are loaded lazily; data are read from disk only
-    when required for computation. This makes Zarr the preferred storage
-    format for large or multi-FOV crop arrays.
-
-    Examples
-    --------
-    Open a Zarr-backed CropArray and compute best-z projections::
-
-        from croparray import open_croparray_zarr
-
-        ca = open_croparray_zarr("my_croparray.zarr")
-        ca.best_z_proj()
-        ca.measure_signal()
-
-    Open the raw Dataset without wrapping::
-
-        ds = open_croparray_zarr("my_croparray.zarr", as_object=False)
-    """
-    ds = xr.open_zarr(store, **kwargs)
-
-    if as_object:
-        from .crop_array_object import CropArray
-        return CropArray(ds)
-
-    return ds
-
-
-
 
 
 def best_z_proj(ca, **kwargs):
@@ -384,7 +233,7 @@ def best_z_proj(ca, **kwargs):
     ca: crop array (x-array dataset)
         A crop array.
     ref_ch: int, optional 
-        A reference intensity channel for finding the best-z projection. Default: ref_ch = 0. If None, best-z is calculated separately for each channel.
+        A reference intensity channel for finding the best-z projection. Default: ref_ch = 0
     disk_r: int, optional
         The radius of the disk (in pixels) to make measurements to determine the best-z slice. Default: disk_r = 1
     roll_num: int, optional
@@ -392,91 +241,71 @@ def best_z_proj(ca, **kwargs):
 
     Returns
     ------- 
-    A 'best-z' x-array with dimensions (fov,n,t,y,x,ch). The best-z x-array contains the intensities of each crop in the 'best' z-slice, where 'best' is defined as the slice having the maximal intensity within a centered xy disk of radius disk_r pixels. A rolling-z maximum projection (over roll_n z-slices) can optionally be performed so best-z represents a max-z projection across multiple z-slices. In addition, the inputted crop array ca is augmented to now contain a 'zc' layer that contains the best-z position of each crop. 
+    A 'best-z' x-array with dimensions (fov,n,t,y,x,ch). The best-z x-array contains the intensities of each crop in the 'best' z-slice, where 'best' is defined as the slice having the maximal intensity within a centered xy disk of radius disk_r pixels. A rolling-z maximum projection (over roll_n z-slices) can optionally be performed so best-z represents a max-z projection across multiple z-slices. In addition, the inputted crop array ca is augmented to now contain a 'zc' layer tha contains the best-z position of each crop. 
+    
     '''
     # Get the optional key word arguments (kwargs):
     ref_ch = kwargs.get('ref_ch', 0)
     disk_r = kwargs.get('disk_r', 1) 
     roll_n = kwargs.get('roll_n', 1)
 
-    res = ca.dx  # resolution for defining disk to make measurements to determine best-z
+    res = ca.dx # resolution for defining disk to make measurements to determine best-z
 
-    # Compute best-z separately for each channel using list comprehension
-    if ref_ch is None:
-        z_sig = [
-            ca.sel(ch=ch_index).int.where(lambda a: a.x**2 + a.y**2 <= (disk_r * res)**2)
-            .mean(dim=['x', 'y'])
-            .rolling(z=roll_n, center=True, min_periods=1)
-            .max()
-            for ch_index in ca.ch.values
-        ]
-        # Choose z-plane
-        output = xr.concat([
-            ca.int.isel(ch=i).rolling(z=roll_n, center=True, min_periods=1).max().isel(z=z_sig[i].argmax(dim='z'))
-            for i in range(len(ca.ch.values))
-        ], dim='ch')   
-        
-        # Add/overwrite the 'zc' layer in the inputted crop-array
-        ca['zc'] = xr.concat([z_sig[i].argmax(dim='z') for i in range(len(ca.ch.values))], dim='ch')
-        ca.zc.attrs['units'] = 'pixels'
-        ca.zc.attrs['long_name'] = 'crop center z for each channel'
-    else:
-        # Get z-signals in disk within each z-plane and apply rolling z-average of these signals
-        z_sig = ca.sel(ch=ref_ch).int.where(lambda a: a.x**2 + a.y**2 <= (disk_r*res)**2).mean(dim=['x','y']).rolling(z=roll_n, center=True, min_periods=1).max()
+    # Get z-signals in disk within each z-plane and apply rolling z-average of these signals
+    z_sig = ca.sel(ch=ref_ch).int.where(lambda a: a.x**2 + a.y**2 <= (disk_r*res)**2).mean(dim=['x','y']).rolling(z=roll_n, center=True, min_periods=1).max()
 
-        # Choose z-plane in ca.int corresponding to max z-signal for each channel, then concatenate x-arrays with coordinate channels
-        output = xr.concat([ca.int.sel(ch=i).rolling(z=roll_n,center=True,min_periods=1).max().isel(z_sig.argmax(dim=['z'])) for i in ca.ch], dim='ch') 
-        
-        # Add/overwrite the 'zc' layer in the inputted crop-array
-        ca['zc'] = z_sig.argmax(dim='z')
-        ca.zc.attrs['units']='pixels'
-        ca.zc.attrs['long_name']='crop center z'        
-
+    # Choose z-plane in ca.int corresponding to max z-signal for each channel, then concatenate x-arrays with coordinate channels
+    output = xr.concat([ca.int.sel(ch=i).rolling(z=roll_n,center=True,min_periods=1).max().isel(z_sig.argmax(dim=['z'])) for i in ca.ch], dim='ch')
+    
+    # Add/overwrite the 'zc' layer in the inputted crop-array
+    ca['zc'] = z_sig.argmax(dim='z')
+    ca.zc.attrs['units']='pixels'
+    ca.zc.attrs['long_name']='crop center z'
 
     return output
 
 
 def measure_signal(ca, **kwargs):
     '''
-    A function to measure and visualize the intensity signal of all crops in the crop array ca.
+    A function to measure and visualize the intensity signal of all crops in the crop array ca. 
 
     Parameters
     ----------
-    ca: crop array (x-array dataset)
+    ca: crop arrray (x-array dataset)
         A crop array.
     ref_ch: int, optional 
-        A reference intensity channel for finding the best-z plane for measurements. Default: None (uses all channels).    
+        A reference intensity channel for finding the best-z plane for measurements. Default: ref_ch = 0    
     disk_r: int, optional
         The radius (in pixels) within which the intensity signal for each crop is measured. Default: disk_r = 1
     disk_bg: int, optional
-        The radius (in pixels) of an outer ring (of width one pixel) within which the background signal for each crop is measured. Default: disk_bg = ca.xy_pad.
+        The radius (in pixels) of an outer ring (of width one pixel) within which which the background signal for each crop is measured. Default: disk_bg = ca.xy_pad.
     roll_num: int, optional
-        The number of z-slices to use in the rolling-z max projection for determining the best-z slices to perform intensity measurements. Default: roll_num = 1.
+        The number of z-slices to use in the rolling-z max projection for determining the best-z slices to perform intensity measurements. min_periods in the da.rolling() function is set to 1 so there will be no Nans at the z-edges of crops. Default: roll_num = 1.
 
     Returns
     ------- 
     An augmented crop array ca with two additional variables: (1) ca.best_z is an x-array with dimensions (fov,n,t,y,x,ch) that contains the best-z-projection after background subtraction; (2) ca.signal is an x-array with dimensions (fov,n,t,ch) that contains the background-subtracted intensity signal of each crop in ca.best_z. 
     '''
-    # Get the optional keyword arguments (kwargs):
-    my_ref_ch = kwargs.get('ref_ch', None)
+    # Get the optional key word arguments (kwargs):
+    my_ref_ch = kwargs.get('ref_ch', 0)
     my_disk_r = kwargs.get('disk_r', 1) 
-    my_disk_bg = kwargs.get('disk_bg', ca.xy_pad) 
+    my_disk_bg = kwargs.get('disk_bg',ca.xy_pad) 
     my_roll_n = kwargs.get('roll_n', 1)
 
     # Create best-z projection (if not already)
     best_z = best_z_proj(ca, ref_ch=my_ref_ch, disk_r=my_disk_r, roll_n=my_roll_n)
     
     # Make mask for measuring within inner ring (the disk):
-    disk_sig = best_z.where(lambda a: a.x**2 + a.y**2 <= (my_disk_r * ca.dx) ** 2).mean(dim=['x', 'y'])
+    disk_sig = best_z.where(lambda a: a.x**2 + a.y**2 <= (my_disk_r*ca.dx)**2).mean(dim=['x','y'])
     
     # Make mask for measuring background within outer ring (the donut):
-    donut_sig = best_z.where(lambda a: (a.x**2 + a.y**2 >= (my_disk_bg * ca.dx) ** 2) & (a.x**2 + a.y**2 < ((my_disk_bg + 1) * ca.dx) ** 2)).median(dim=['x', 'y'])
+    donut_sig = best_z.where(lambda a: (a.x**2 + a.y**2 >= (my_disk_bg*ca.dx)**2) & (a.x**2 + a.y**2 < ((my_disk_bg+1)*ca.dx)**2)).mean(dim=['x','y'])
 
     # Measure signal as disk - donut: 
     signal = disk_sig - donut_sig 
 
     # Add best_z variable to ca
-    ca['best_z'] = best_z - donut_sig
+    ca['best_z'] = best_z - disk_sig
     ca['best_z'].attrs['units'] = 'intensity (a.u.)'
     ca['best_z'].attrs['long_name'] = 'max intensity projection into best-z plane(s)'
 
@@ -485,54 +314,8 @@ def measure_signal(ca, **kwargs):
     ca['signal'].attrs['units'] = 'intensity (a.u.)'
     ca['signal'].attrs['long_name'] = 'crop signal'
 
-    return ca
+    pass
 
-def measure_signal_raw(ca, **kwargs):
-    '''
-    A function to measure and visualize the intensity signal of all crops in the crop array ca.
-
-    Parameters
-    ----------
-    ca: crop array (x-array dataset)
-        A crop array.
-    ref_ch: int, optional 
-        A reference intensity channel for finding the best-z plane for measurements. Default: None (uses all channels).    
-    disk_r: int, optional
-        The radius (in pixels) within which the intensity signal for each crop is measured. Default: disk_r = 1
-    disk_bg: int, optional
-        The radius (in pixels) of an outer ring (of width one pixel) within which the background signal for each crop is measured. Default: disk_bg = ca.xy_pad.
-    roll_num: int, optional
-        The number of z-slices to use in the rolling-z max projection for determining the best-z slices to perform intensity measurements. Default: roll_num = 1.
-
-    Returns
-    ------- 
-    An augmented crop array ca with two additional variables: (1) ca.best_z_raw is an x-array with dimensions (fov,n,t,y,x,ch) that contains the best-z-projection; (2) ca.signal_raw is an x-array with dimensions (fov,n,t,ch) that contains the intensity signal of each crop in ca.best_z_raw. 
-    '''
-    # Get the optional keyword arguments (kwargs):
-    my_ref_ch = kwargs.get('ref_ch', None)
-    my_disk_r = kwargs.get('disk_r', 1) 
-    my_roll_n = kwargs.get('roll_n', 1)
-
-    # Create best-z projection (if not already)
-    best_z = best_z_proj(ca, ref_ch=my_ref_ch, disk_r=my_disk_r, roll_n=my_roll_n)
-    
-    # Make mask for measuring within inner ring (the disk):
-    disk_sig = best_z.where(lambda a: a.x**2 + a.y**2 <= (my_disk_r) ** 2).sum(dim=['x', 'y'])
-
-    # Add best_z variable to ca
-    ca['best_z_raw'] = best_z
-    ca['best_z_raw'].attrs['units'] = 'intensity (a.u.)'
-    ca['best_z_raw'].attrs['long_name'] = 'max intensity projection into best-z plane(s)'
-
-    # Add best_z_signal variable to ca:
-    ca['signal_raw'] = disk_sig
-    ca['signal_raw'].attrs['units'] = 'intensity (a.u.)'
-    ca['signal_raw'].attrs['long_name'] = 'crop signal'
-
-    return ca
-
-
-# Make various montages of crop array for easy viewing in napari
 def montage(ca, **kwargs):
     '''
     Returns a montage of a crop array for easier visualizaton.
@@ -555,7 +338,7 @@ def montage(ca, **kwargs):
     row = kwargs.get('row', 'n') 
 
     if row != col: # arrange crops in rows and columns in the xy plane 
-        output = ca.stack(r=(row,'y'),c=(col,'x')).transpose('cell','rep','exp','tracks','fov','n','t','z','r','c','ch', missing_dims='ignore') 
+        output = ca.stack(r=(row,'y'),c=(col,'x')).transpose('tracks','fov','n','t','z','r','c','ch', missing_dims='ignore') 
 
     if row == col:  # arrange crops in square col x col montage in the xy-plane
         col_length = len(ca.coords.get(col))
@@ -576,241 +359,30 @@ def montage(ca, **kwargs):
         ).rename({col:'montage'}  # rename 'col' dimension in x-arrays to 'montage'
         ).unstack(                # unstack the montage_row and montage_col coordinates    
         ).stack(r=('montage_row','y'), c=('montage_col','x')  # Arrange crops in c x r square in xy-plane
-        ).transpose('cell','rep','exp','tracks','fov','n','t','z','r','c','ch',missing_dims='ignore') # Ensure standard crop array ordering
+        ).transpose('tracks','fov','n','t','z','r','c','ch',missing_dims='ignore') # Ensure standard crop array ordering
 
     return output
 
-def view_montage(my_ca_montage):
-    """
-    Display a montage of images in Napari based on the number of channels.
 
-    Parameters:
-    my_ca_montage (xarray.DataArray or xarray.Dataset): The input dataset with channel information.
-    """
-    num_channels = len(my_ca_montage.ch.values)
-    
-    # Initialize the Napari viewer
-    viewer = napari.Viewer()
-
-    if num_channels == 3:
-        viewer.add_image(
-            my_ca_montage.sel(ch=0).best_z, 
-            colormap='red', 
-            name='Channel 1', 
-            blending='additive', 
-            contrast_limits=[0, my_ca_montage.sel(ch=0).best_z.quantile(0.9995).values]
-        )
-        viewer.add_image(
-            my_ca_montage.sel(ch=1).best_z, 
-            colormap='green', 
-            name='Channel 2', 
-            blending='additive', 
-            contrast_limits=[0, my_ca_montage.sel(ch=1).best_z.quantile(0.9995).values]
-        )
-        viewer.add_image(
-            my_ca_montage.sel(ch=2).best_z, 
-            colormap='blue', 
-            name='Channel 3', 
-            blending='additive', 
-            contrast_limits=[0, my_ca_montage.sel(ch=2).best_z.quantile(0.9995).values]
-        )
-    
-    elif num_channels == 2:
-        viewer.add_image(
-            my_ca_montage.sel(ch=0).best_z, 
-            colormap='magenta', 
-            name='Channel 1', 
-            blending='additive', 
-            contrast_limits=[0, my_ca_montage.sel(ch=0).best_z.quantile(0.9995).values]
-        )
-        viewer.add_image(
-            my_ca_montage.sel(ch=1).best_z, 
-            colormap='green', 
-            name='Channel 2', 
-            blending='additive', 
-            contrast_limits=[0, my_ca_montage.sel(ch=1).best_z.quantile(0.9995).values]
-        )
-
-    elif num_channels == 1:
-        viewer.add_image(
-            my_ca_montage.sel(ch=0).best_z, 
-            colormap='green', 
-            name='Channel 1', 
-            blending='additive', 
-            contrast_limits=[0, my_ca_montage.sel(ch=0).best_z.quantile(0.9995).values]
-        )
-    
-    else:
-        raise ValueError(f"Unsupported number of channels: {num_channels}")
-
-    return viewer
-
-# Pull out variables in a crop array to a dataframe
-def variables_to_df(ca, var_names):
-    """
-    Creates a pandas dataframe from the specified variables of a crop array.  
-
-    Parameters:
-    ----------
-    ca: crop array (x-array dataset)
-        A crop array.
-    var_names: list of str
-        Names of the variables in the xarray dataset to convert to a dataframe.
-    
-    Returns:
-    -------
-    A concatenated pandas dataframe with the specified variables such that each column of the dataframe corresponds to one coordinate dimension in the crop array. Basically the output corresponds to xr.to_dataframe(), but with multiindex flattened.
-    """
-        # Check if variables exist in the dataset
-    for var in var_names:
-        if var not in ca:
-            raise ValueError(f"'{var}' not found in the provided xarray dataset.")
-
-    # Check if the variables have the same dimensions
-    dims = ca[var_names[0]].dims
-    for var in var_names[1:]:
-        if ca[var].dims != dims:
-            raise ValueError(f"Variables do not have matching dimensions. {var_names[0]} has dimensions {dims} while {var} has dimensions {ca[var].dims}")
-
-    # Convert each variable to a dataframe and concatenate them
-    dfs = [ca[var].to_dataframe().reset_index(level=list(range(len(dims)))) for var in var_names]
-    
-    final_df = pd.concat(dfs, axis=1)
-    # Drop duplicate columns if any arise due to the reset index operation
-    final_df = final_df.loc[:,~final_df.columns.duplicated()]
-    
-    return final_df
-
-# Tracking with trackpy
-def perform_tracking_with_exclusions(df, search_range=10, memory=1):
-    """
-    Perform particle tracking on DataFrame with option to exclude certain data points 
-    and assign them a default track ID.
-
-    Parameters:
-    ----------
-    df: DataFrame
-        DataFrame containing particle coordinates and potentially other data.
-    search_range: int
-        Maximum distance particles can move between frames.
-    memory: int
-        Maximum number of frames during which a particle can vanish, then reappear, and still be considered the same particle.
-
-    Returns:
-    -------
-    DataFrame with tracked particles, including excluded ones assigned a default track ID.
-    """
-    # Step 1: Filter out rows with x=0 and y=0
-    valid_data = df[(df['x'] != 0) | (df['y'] != 0)]
-    excluded_data = df[(df['x'] == 0) & (df['y'] == 0)].copy()
-    
-    # Step 2: Perform tracking on the filtered data
-    tracked_data = tp.link_df(valid_data, search_range=search_range, memory=memory)
-    
-    # Step 3: Add the filtered-out rows back with a specific track_id
-    excluded_data['particle'] = -1  # Assign default track_id to excluded rows
-    
-    # Combine tracked data with excluded data and sort by original index to maintain order
-    combined_data = pd.concat([tracked_data, excluded_data]).sort_index()
-    combined_data['track_id'] = combined_data['particle'].fillna(-1).astype(int)+1
-
-    return combined_data
-
-# Make track_id dimension in crop array (that has been tracked)
-def track_array(ca):
-    """
-    Create a track-array dataset from a tracked crop-array dataset by grouping
-    entries by unique track IDs (stored in ca['id']).
-
-    This version FIXES the common issue where `fov` becomes a non-index
-    coordinate on `t` (i.e., `fov (t)`), which breaks `.sel(fov=...)` on
-    variables like `best_z`. We enforce `fov` as a true dimension (length 1)
-    per track, under the assumption that each track belongs to exactly one FOV.
+# Outputting signal data array in crop xarray to a convenient dataframe for plotting barplots and such. 
+def signal_to_df(ca):
+    '''
+    Returns an x-array that holds the best-z projection of intensities of spots in a reference channel and augments ca to include a 'ca.zc' layer that holds the best-z values.
 
     Parameters
     ----------
-    ca : xarray.Dataset
-        Crop-array dataset that contains an `id` variable with per-(fov,n,t)
-        track IDs, and has a stacked dimension named 'stacked_fov_n_t'
-        (created by your crop-array pipeline).
-
+    ca: crop array (x-array dataset)
+        A crop array with measured 'signal' variable. 
+    
     Returns
     -------
-    xarray.Dataset
-        Track-array dataset with dimension `track_id` and (typically) `fov`
-        as a real dimension. Variables are aligned across tracks with fill_value=0.
-    """
-    # Find all unique (non-zero) track IDs
-    my_ids = np.unique(ca["id"].values)
-    my_ids = my_ids[my_ids != 0]
-
-    my_das = []
-    for tid in my_ids:
-        # Select the group for this track id and convert stacked index -> time index
-        temp = (
-            ca.groupby("id")[tid]
-              .reset_index("stacked_fov_n_t")
-              .sortby("t")
-              .reset_coords("n", drop=True)                 # n not meaningful in track view
-              .set_index(stacked_fov_n_t="t")               # make 't' the index for this track
-              .rename({"stacked_fov_n_t": "t"})
-        )
-
-        # ---- FIX: ensure `fov` is a true dimension, not a coord on `t` ----
-        if "fov" in temp.coords:
-            fovs = np.unique(temp["fov"].values)
-            if len(fovs) != 1:
-                raise ValueError(f"Track {tid} spans multiple FOVs: {fovs}")
-            fov0 = int(fovs[0])
-
-            # Remove the (t)-coordinate and promote to a real dimension
-            temp = temp.drop_vars("fov")
-            temp = temp.expand_dims(fov=[fov0])
-
-        my_das.append(temp)
-
-    # Concatenate into track array
-    my_taz = xr.concat(my_das, dim=pd.Index(my_ids, name="track_id"), fill_value=0)
-
-    # Reorder dimensions (drop 'n' from transpose; it was dropped above)
-    my_taz = my_taz.transpose("track_id", "fov", "t", "z", "y", "x", "ch", missing_dims="ignore")
-
-    return my_taz
-
-
-# Create a track array from positions in a crop array
-def to_track_array(ca, channel_to_track, min_track_length, search_range, memory):
-    """
-    Track particles in a given croparray dataset and update the croparray dataset with new track IDs,
-    filtering out short tracks.
-
-    Parameters:
-    - ca: The dataset array
-    - channel_to_track: Channel index used for tracking particles
-    - min_track_length: Minimum length required for a track to be kept
-    - search_range: Search range for linking particles to form tracks
-    - memory: Number of frames a track can skip
-    """
-    # Step 1: Prepare the DataFrame for tracking
-    dft = variables_to_df(ca, ['xc', 'yc'])
-    dft['frame'] = (dft['t'] / ca.dt.values).astype(int)
-    dft['x'] = dft['xc']
-    dft['y'] = dft['yc']
+    A pandas dataframe with crop array signals such that each column of the dataframe corresponds to one coordinate dimension in th crop array. Basically the output corresponds to xr.to_dataframe(), but with multiindex flattened.
     
-    # Step 2: Perform tracking
-    dft_filtered = perform_tracking_with_exclusions(dft[dft['ch'] == channel_to_track], search_range=search_range, memory=memory)
-    
-    # Step 3: Filter out short tracks
-    track_lengths = dft_filtered.groupby('track_id').size()
-    short_tracks = track_lengths[track_lengths < min_track_length].index
-    dft_filtered.loc[dft_filtered['track_id'].isin(short_tracks), 'track_id'] = 0
-    
-    # Step 4: Update the original dataset with new track IDs
-    dft_filtered.set_index(['fov', 'n', 't'], inplace=True)
-    track_id_array = dft_filtered['track_id'].to_xarray()
-    ca['id'] = track_id_array
-    
-    return track_array(ca)  # outputed track!
+    '''
+    # Converts crop array to flattened dataframe for seaborn-like plotting
+    dim_levels =list(np.arange(len(ca.signal.dims)))
+    return ca.signal.to_dataframe().reset_index(level=dim_levels)
+
 
 # Detecting particles for each frame
 def tracking_spots(img,particle_diameter=5,max_distance_movement=5,min_trajectory_length=5, num_iterations = 100,show_plots=True):
@@ -960,7 +532,6 @@ def tracking_spots(img,particle_diameter=5,max_distance_movement=5,min_trajector
 
 # Detecting particles for each frame w/o tracking
 def detecting_spots(img,particle_diameter=5, num_iterations = 100,show_plots=True):
-
     """
     Creates a 
 
@@ -1069,760 +640,3 @@ def detecting_spots(img,particle_diameter=5, num_iterations = 100,show_plots=Tru
         print('No detection was possible with the list of given parameters.')
         spots =[]
     return spots 
-
-def plot_normalized_best_z_raw(ds, figsize=(20, 15)):
-    """
-    Plot the normalized sum of `best_z_raw` for each track over time.
-    
-    Parameters:
-    - ds (xarray.Dataset): The dataset containing `best_z_raw` and other variables.
-    - figsize (tuple): The size of the figure (width, height).
-    """
-    
-    # Sum `best_z_raw` over `y` and `x` dimensions for each track and time
-    best_z_raw_sum = ds.best_z.sum(dim=['y', 'x'])
-    
-    # Normalize to the first time point for each track
-    def normalize_to_first_time_point(track_data):
-        first_time_point_value = track_data.isel(t=0)  # Value at the first time point
-        return track_data / first_time_point_value
-
-    best_z_raw_sum_normalized = best_z_raw_sum.groupby('track_id').map(normalize_to_first_time_point)
-    
-    # Get track IDs and number of tracks
-    track_ids = ds.track_id.values
-    num_tracks = len(track_ids)
-
-    # Determine number of rows and columns for the grid
-    n_cols = 5
-    n_rows = (num_tracks + n_cols - 1) // n_cols  # This ensures enough rows to fit all tracks
-
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=figsize, sharex=True, sharey=True)
-
-    # Flatten the axes array for easy indexing
-    axes = axes.flatten()
-
-    for idx, track_id in enumerate(track_ids):
-        ax = axes[idx]
-        # Extract data for the current track
-        data = best_z_raw_sum_normalized.sel(track_id=track_id)
-        
-        # Check if the data has values
-        if data.size == 0:
-            ax.axis('off')  # If no data, hide the axis
-            continue
-
-        time_points = data['t'].values  # Extract time points for the current track
-        data_values = data.values.squeeze()  # Get the normalized values
-
-        ax.plot(time_points, data_values, label=f'Track {track_id}')
-        ax.set_title(f'Track {track_id}')
-        ax.set_xlabel('Time')
-        ax.set_ylabel('Normalized Sum of best_z_raw')
-        ax.legend()
-
-    # Hide unused subplots
-    for ax in axes[num_tracks:]:
-        ax.axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-def create_tracks_df(my_ta):
-    # Initialize empty lists to store data
-    track_dfs = []
-
-    # Iterate over each track_id
-    for track_id in my_ta.track_id.values:
-        # Filter the xarray dataset by the specified track_id
-        track_data = my_ta.sel(track_id=track_id)
-
-        # Filter out rows where xc or yc are both [0, 0]
-        valid_indices_xc = np.where(track_data.xc != 0)[0]
-        valid_indices_yc = np.where(track_data.yc != 0)[0]
-        valid_indices = np.intersect1d(valid_indices_xc, valid_indices_yc)
-
-        # Filter the data based on the valid indices
-        filtered_data = track_data.isel(t=valid_indices)
-
-        # Create DataFrame
-        track_df = pd.DataFrame({
-            'track_id': [track_id] * len(filtered_data.t),
-            't': filtered_data.t.values.tolist(),
-            'y': filtered_data.yc[:, 0].values.tolist(),
-            'x': filtered_data.xc[:, 0].values.tolist()
-        })
-
-        # Append the DataFrame to the list
-        track_dfs.append(track_df)
-    # track_dfs['y'] -= len(my_ta.y.values)
-    # track_dfs['x'] -= len(my_ta.x.values)
-
-    # Concatenate all DataFrames in the list
-    result_df = pd.concat(track_dfs, ignore_index=True)
-
-    result_df['y'] -= ((len(my_ta.y.values)-1)/2)
-    result_df['x'] -= ((len(my_ta.x.values)-1)/2)
-    return result_df
-
-def display_cell_and_tracks(img_croparray, tracks_df):
-    """
-    Display the maximum intensity projection of the images and the tracks in Napari.
-
-    Parameters:
-    img_croparray (numpy.ndarray): Array containing image data with dimensions (fov, t, z, x, y, ch).
-    tracks_df (pandas.DataFrame): DataFrame containing track information.
-
-    Returns:
-    napari.Viewer: The viewer instance with the images and tracks added.
-    """
-    # Compute the maximum projection along the specified axis
-    img_max = np.max(img_croparray[0, :, :, :, :], axis=1)
-    
-    # Get the number of channels
-    num_channels = img_max.shape[-1]
-    
-    # Initialize the Napari viewer based on the number of channels
-    if num_channels == 1:
-        viewer_tracks = napari.view_image(img_max[:, :, :, 0], colormap='green',name = 'Ch 1', blending='additive')
-    elif num_channels == 2:
-        viewer_tracks = napari.view_image(img_max[:, :, :, 0], colormap='magenta',name = 'Ch 1', blending='additive')
-        viewer_tracks.add_image(img_max[:, :, :, 1], colormap='green',name = 'Ch 2', blending='additive')
-    elif num_channels == 3:
-        viewer_tracks = napari.view_image(img_max[:, :, :, 0], colormap='red',name = 'Ch 1', blending='additive')
-        viewer_tracks.add_image(img_max[:, :, :, 1], colormap='green',name = 'Ch 2', blending='additive')
-        viewer_tracks.add_image(img_max[:, :, :, 2], colormap='blue',name = 'Ch 3', blending='additive')
-    else:
-        raise ValueError(f"Unsupported number of channels: {num_channels}")
-
-    # Add tracks and points to the viewer
-    viewer_tracks.add_tracks(tracks_df, name='track tails')
-    viewer_tracks.add_points(tracks_df[['t', 'y', 'x']].values, 
-                              size=12, 
-                              face_color='transparent', 
-                              edge_color='yellow', 
-                              symbol='disc', 
-                              name='track_points')
-    
-    return viewer_tracks
-
-def rgb_crops(my_ca):
-    """
-    Display image crops based on the number of channels in the dataset.
-
-    Parameters:
-    my_ca (xarray.DataArray or xarray.Dataset): The input dataset with channel information.
-    vmin (int, optional): Minimum value for color scale. Default is 0.
-    vmax (int, optional): Maximum value for color scale. Default is 500.
-    size (float, optional): Size of the plotted images. Default is 1.5.
-    """
-    num_channels = len(my_ca.ch.values)
-    
-    if num_channels == 3:
-        my_ca_cropviewer = my_ca
-
-    elif num_channels == 2:
-        my_ca_cropviewer = xr.concat([my_ca, my_ca.sel(ch=0).assign_coords(ch=2)], dim='ch')
-    
-    elif num_channels == 1:
-        my_ca_cropviewer = xr.concat([my_ca, my_ca.sel(ch=0).assign_coords(ch=1), my_ca.sel(ch=0).assign_coords(ch=2)], dim='ch') #NEED TO TEST IF THIS WORKS
-    
-    else:
-        raise ValueError(f"Unsupported number of channels: {num_channels}")
-    return my_ca_cropviewer
-
-# Pull out variables in a crop array to a dataframe
-def variables_to_df(ca, var_names):
-    """
-    Creates a pandas dataframe from the specified variables of a crop array.  
-
-    Parameters:
-    ----------
-    ca: crop array (x-array dataset)
-        A crop array.
-    var_names: list of str
-        Names of the variables in the xarray dataset to convert to a dataframe.
-    
-    Returns:
-    -------
-    A concatenated pandas dataframe with the specified variables such that each column of the dataframe corresponds to one coordinate dimension in the crop array. Basically the output corresponds to xr.to_dataframe(), but with multiindex flattened.
-    """
-        # Check if variables exist in the dataset
-    for var in var_names:
-        if var not in ca:
-            raise ValueError(f"'{var}' not found in the provided xarray dataset.")
-
-    # Check if the variables have the same dimensions
-    dims = ca[var_names[0]].dims
-    for var in var_names[1:]:
-        if ca[var].dims != dims:
-            raise ValueError(f"Variables do not have matching dimensions. {var_names[0]} has dimensions {dims} while {var} has dimensions {ca[var].dims}")
-
-    # Convert each variable to a dataframe and concatenate them
-    dfs = [ca[var].to_dataframe().reset_index(level=list(range(len(dims)))) for var in var_names]
-    
-    final_df = pd.concat(dfs, axis=1)
-    # Drop duplicate columns if any arise due to the reset index operation
-    final_df = final_df.loc[:,~final_df.columns.duplicated()]
-    
-    return final_df
-
-def track_signals_to_df(my_ta):
-    """
-    Combine signal and signal_raw data from each channel into a single DataFrame.
-
-    Parameters:
-    - my_ta: xarray.Dataset containing 'signal' and 'signal_raw' data for each channel.
-
-    Returns:
-    - DataFrame: Combined DataFrame with columns for each signal and signal_raw.
-    """
-    # Initialize an empty list to hold individual DataFrames for each channel
-    combined_data = []
-
-    # Get the number of channels
-    num_channels = my_ta.ch.size
-
-    # Loop through each channel to extract and combine the data
-    for ch in range(num_channels):
-        # Convert signal_raw to DataFrame
-        df_signal_raw = my_ta.sel(ch=ch)['signal_raw'].to_dataframe().reset_index()
-        
-        # Convert signal to DataFrame
-        df_signal = my_ta.sel(ch=ch)['signal'].to_dataframe().reset_index()
-
-        # Merge both DataFrames on track_id, t, and ch
-        df_combined = pd.merge(df_signal_raw, df_signal, on=['track_id', 't', 'ch'], suffixes=('', '_signal'))
-
-        # Rename columns to distinguish between signal and signal_raw
-        df_combined.rename(columns={'signal': f'signal_ch_{ch}', 'signal_raw': f'signal_raw_ch_{ch}'}, inplace=True)
-
-        # Append the combined DataFrame to the list
-        combined_data.append(df_combined)
-
-    # Concatenate all DataFrames along the columns
-    final_df = pd.concat(combined_data, axis=1)
-
-    # Drop duplicate columns if necessary (like 'ch' appearing multiple times)
-    final_df = final_df.loc[:, ~final_df.columns.duplicated()]
-
-    # Remove unwanted columns
-    columns_to_remove = ['ch', 'fov', 'fov_signal']
-    final_df = final_df.drop(columns=columns_to_remove, errors='ignore')
-
-    return final_df
-
-def plot_track_signals(df_tracks, plot_column='signal'):
-    """
-    Plot normalized signals from the provided DataFrame.
-
-    Parameters:
-    - df_normalized: DataFrame containing 't', 'signal_raw_norm', 'signal_norm', and 'track_id'.
-    - plot_column: The column to plot. Options are 'signal_raw_norm', 'signal_norm', or any other specified column.
-    """
-
-    # Get unique track IDs and number of tracks
-    track_ids = df_tracks['track_id'].unique()
-    num_tracks = len(track_ids)
-
-    # Determine number of rows and columns for the grid
-    n_cols = 5
-    n_rows = (num_tracks + n_cols - 1) // n_cols  # This ensures enough rows to fit all tracks
-
-    # Create a figure and axes for plotting
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 3 * n_rows), sharex=True, sharey=True)
-
-    # Flatten the axes array for easy indexing
-    axes = axes.flatten()
-
-    for idx, track_id in enumerate(track_ids):
-        ax = axes[idx]
-        
-        # Extract data for the current track
-        track_data = df_tracks[df_tracks['track_id'] == track_id]
-        
-        # Check if the data has values
-        if track_data.empty:
-            ax.axis('off')  # If no data, hide the axis
-            continue
-        
-        time_points = track_data['t'].values  # Extract time points for the current track
-        signal_to_plot = track_data[plot_column].values  # Get the specified signal column
-
-        # Plot the specified signal
-        ax.plot(time_points, signal_to_plot, label=plot_column, color='green')  # Adjust color as needed
-        
-        ax.set_title(f'Track {track_id}')
-        ax.set_xlabel('Time')
-        ax.set_ylabel('Normalized Values')
-        ax.legend()
-
-    # Hide unused subplots
-    for ax in axes[num_tracks:]:
-        ax.axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-def spot_detect_and_qc(img, minmass=6000, size=5):
-    """
-    Locates features in an image using trackpy locate function and creates a new image with a pixel at the location of the feature closest to the center. This pixel has the signal value of the feature.
-
-    This function is used to identify and highlight the location of features in an image. This is useful for visualizing the features and their signal values from an croparray dataset with the 11x11 pad. This function can be used to identify or quality control the features in the image such as mRNA and translation spots.
-
-    Parameters:
-    img (numpy.ndarray): The input image.
-    minmass (int, optional): The minimum integrated brightness. Defaults to 6000.
-    size (int, optional): The size of the features in pixels. Defaults to 5.
-
-    Returns:
-    numpy.ndarray: A new image of the same size as the input image, with a pixel at the location of the feature closest to the center. The pixel value is the signal value of the feature.
-
-    """
-    features = tp.locate(img, size, minmass)
-    new_img = np.zeros_like(img)
-    if len(features) > 0:
-        # Calculate the center of the image
-        center_x = img.shape[1] / 2
-        center_y = img.shape[0] / 2
-
-        if len(features) > 1:
-            # Calculate the Euclidean distance from each feature to the center
-            distances = np.sqrt((features['x'] - center_x)**2 + (features['y'] - center_y)**2)
-            # Find the index of the feature with the smallest distance
-            closest_index = np.argmin(distances)
-            x_value = features['x'].values[closest_index]
-            y_value = features['y'].values[closest_index]
-            signal_value = features['signal'].values[closest_index]
-        else:
-            x_value = features['x'].values[0]
-            y_value = features['y'].values[0]
-            signal_value = features['signal'].values[0]
-
-        # Set the pixel at (x_value, y_value) to the maximum pixel value
-        new_img[int(y_value), int(x_value)] = signal_value
-    return new_img
-
-def plot_trackarray_crops(trackarray, track_num, start=0, stop=10, step=1, rolling=1, ch=0):
-    """
-    Plots the crops of a specific track number from a trackarray, using a rolling average if specified.
-
-    Parameters:
-    - trackarray (xr.Dataset): Track array dataset with dimensions (track_id, t, y, x, ch)
-    - track_num (int): The index of the track to plot
-    - start (int): Start frame
-    - stop (int): Stop frame (exclusive)
-    - step (int): Step size
-    - rolling (int): Rolling average window size (default=1 means no averaging)
-    - ch (int): Channel index to plot
-    """
-    # Extract the intensity data
-    crops = trackarray.int.sel(track_id=track_num, ch=ch).isel(z=0)  # flatten z for 2D crop
-
-    # Apply rolling average along time axis if needed
-    if rolling > 1:
-        crops = crops.rolling(t=rolling, center=True, min_periods=1).mean()
-
-    # Select time indices
-    time_indices = np.arange(start, stop, step)
-    num_frames = len(time_indices)
-
-    # Determine subplot grid size
-    n_cols = 5
-    n_rows = (num_frames + n_cols - 1) // n_cols
-
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows))
-    axes = axes.flatten()
-
-    for idx, t_idx in enumerate(time_indices):
-        if t_idx >= crops.sizes['t']:
-            axes[idx].axis('off')
-            continue
-        img = crops.isel(t=t_idx).values
-        axes[idx].imshow(img, cmap='gray')
-        axes[idx].set_title(f't={t_idx}')
-        axes[idx].axis('off')
-
-    # Hide any unused subplots
-    for ax in axes[num_frames:]:
-        ax.axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_trackarray_crops(trackarray, track_num, start=0, stop=10, step=1, rolling=1, ch=0):
-    """
-    Plots the crops of a specific track number from a trackarray, using a rolling average if specified.
-
-    Parameters:
-    - trackarray (xr.Dataset): Track array dataset with dimensions (track_id, t, y, x, ch)
-    - track_num (int): The index of the track to plot
-    - start (int): Start frame
-    - stop (int): Stop frame (exclusive)
-    - step (int): Step size
-    - rolling (int): Rolling average window size (default=1 means no averaging)
-    - ch (int): Channel index to plot
-    """
-    # Extract the intensity data
-    crops = trackarray.int.sel(track_id=track_num, ch=ch).isel(z=0)  # flatten z for 2D crop
-
-    # Apply rolling average along time axis if needed
-    if rolling > 1:
-        crops = crops.rolling(t=rolling, center=True, min_periods=1).mean()
-
-    # Select time indices
-    time_indices = np.arange(start, stop, step)
-    num_frames = len(time_indices)
-
-    # Determine subplot grid size
-    n_cols = 5
-    n_rows = (num_frames + n_cols - 1) // n_cols
-
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3 * n_cols, 3 * n_rows))
-    axes = axes.flatten()
-
-    for idx, t_idx in enumerate(time_indices):
-        if t_idx >= crops.sizes['t']:
-            axes[idx].axis('off')
-            continue
-        img = crops.isel(t=t_idx).values
-        axes[idx].imshow(img, cmap='gray')
-        axes[idx].set_title(f't={t_idx}')
-        axes[idx].axis('off')
-
-    # Hide any unused subplots
-    for ax in axes[num_frames:]:
-        ax.axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-    
-def plot_rgb_and_channels_imshow(
-    data,
-    fov=0,
-    track_id=1,
-    t_slice=(0, 10, 3),
-    rolling=1,
-    quantile_range=(0.02, 0.99),
-    rgb_channels=(0, 1, 2),
-    ch=None,
-):
-    """
-    Display one RGB composite row (when possible) followed by grayscale rows for each channel,
-    using xarray.plot.imshow.
-
-    Updated features:
-      - `track_id` can be an int OR a list/tuple/np.ndarray of ints
-        (plots one figure per track_id).
-      - Optional `ch=<value>` to show ONLY that one channel in grayscale
-        (skips RGB and skips other channels).
-
-    Robust to:
-      - datasets where `fov` is a true dimension on `best_z`, OR
-      - datasets where `fov` exists only as a coordinate on `t` (e.g., fov(t))
-
-    Parameters
-    ----------
-    data : xr.Dataset
-        Dataset containing `best_z` with dims typically like:
-        (track_id, fov, t, y, x, ch) OR (track_id, t, y, x, ch).
-    fov : int, default 0
-        Field of view to select (if applicable).
-    track_id : int or sequence of int, default 1
-        Track ID(s) to plot. If a sequence is provided, plots each track separately.
-    t_slice : tuple, default (0, 10, 3)
-        (start, stop, step) for time slicing.
-    rolling : int, default 1
-        Rolling mean window over `t` for smoothing (>=1). If 1, no smoothing.
-    quantile_range : tuple, default (0.02, 0.99)
-        (low, high) quantiles for per-channel normalization (computed on positive pixels).
-    rgb_channels : tuple, default (0, 1, 2)
-        Channel labels (or indices) to use for RGB composite when exactly 3 channels
-        can be selected.
-    ch : int or None, default None
-        If provided, show only this channel in grayscale (no RGB, no other channels).
-
-    Returns
-    -------
-    dict[int, xr.DataArray]
-        Mapping from track_id -> normalized DataArray used for plotting, with dims (t, y, x, ch).
-        If `ch` is provided, returned arrays will have ch size = 1.
-    """
-    import numpy as np
-    import xarray as xr
-
-    if "best_z" not in data:
-        raise KeyError("Dataset must contain a 'best_z' DataArray.")
-
-    # Normalize track_id input to a list
-    if isinstance(track_id, (list, tuple, np.ndarray)):
-        track_ids = list(track_id)
-    else:
-        track_ids = [track_id]
-
-    results = {}
-    eps = 1e-6
-
-    for tid in track_ids:
-        # --- Select the requested track and (optionally) fov in a robust way ---
-        bz = data["best_z"].sel(track_id=tid)
-
-        # Case 1: fov is a real dimension on best_z
-        if "fov" in bz.dims:
-            bz = bz.sel(fov=fov)
-
-        # Case 2: fov exists only as a coordinate (often on t)
-        elif "fov" in data.coords:
-            try:
-                bz = bz.where(data["fov"] == fov, drop=True)
-            except Exception:
-                pass
-
-        # --- Time slicing ---
-        start, stop, step = t_slice
-        bz = bz.isel(t=slice(start, stop, step))
-
-        # --- Optional rolling smoothing over time ---
-        if rolling and rolling > 1:
-            bz = bz.rolling(t=rolling, center=True, min_periods=1).mean()
-
-        # --- Optional single-channel view ---
-        if ch is not None:
-            # Select that channel (by label if possible, else by index)
-            try:
-                bz1 = bz.sel(ch=ch)
-            except Exception:
-                bz1 = bz.isel(ch=int(ch))
-
-            # Ensure we still have a 'ch' dimension of size 1 for consistent downstream
-            bz1 = bz1.expand_dims(ch=[bz1["ch"].values] if "ch" in bz1.coords else [ch])
-
-            da_ch = bz1.isel(ch=0).where(lambda x: x > 0)
-            q0 = da_ch.quantile(quantile_range[0])
-            q1 = da_ch.quantile(quantile_range[1])
-            normed = (((bz1.isel(ch=0) - q0) / (q1 - q0 + eps)).clip(0, 1)).expand_dims(ch=bz1["ch"].values)
-
-            # Plot ONLY this grayscale channel
-            g_gray = normed.isel(ch=0).plot.imshow(
-                col="t",
-                cmap="gray",
-                xticks=[],
-                yticks=[],
-                aspect=1,
-                size=5,
-                vmin=0,
-                vmax=1,
-                robust=True,
-                add_labels=False,
-                add_colorbar=False,
-            )
-            g_gray.set_xlabels("")
-            g_gray.set_ylabels("")
-            g_gray.set_titles(f"track_id={tid}, ch={ch}")
-
-            results[int(tid)] = normed
-            continue
-
-        # --- Per-channel normalization (positive pixels only) ---
-        ch_normed = []
-        for ch_val in bz["ch"].values:
-            da_ch = bz.sel(ch=ch_val).where(lambda x: x > 0)
-            q0 = da_ch.quantile(quantile_range[0])
-            q1 = da_ch.quantile(quantile_range[1])
-            norm = ((bz.sel(ch=ch_val) - q0) / (q1 - q0 + eps)).clip(0, 1)
-            ch_normed.append(norm)
-
-        normed = xr.concat(ch_normed, dim="ch")
-        normed = normed.assign_coords(ch=bz["ch"].values)
-
-        # --- RGB composite row (only if we can select exactly 3 channels) ---
-        n_ch = normed.sizes.get("ch", 0)
-        if n_ch >= 3:
-            try:
-                rgb_da = normed.sel(ch=list(rgb_channels))
-            except Exception:
-                rgb_da = normed.isel(ch=slice(0, 3))
-
-            if rgb_da.sizes.get("ch", 0) == 3:
-                g_rgb = rgb_da.plot.imshow(
-                    col="t",
-                    rgb="ch",
-                    xticks=[],
-                    yticks=[],
-                    aspect=1,
-                    size=5,
-                    vmin=0,
-                    vmax=1,
-                    robust=False,
-                    add_labels=False,
-                    add_colorbar=False,
-                )
-                g_rgb.set_xlabels("")
-                g_rgb.set_ylabels("")
-                g_rgb.set_titles(f"track_id={tid} (RGB)")
-
-        # --- Grayscale rows for each channel (always) ---
-        for ch_val in normed["ch"].values:
-            g_gray = normed.sel(ch=ch_val).plot.imshow(
-                col="t",
-                cmap="gray",
-                xticks=[],
-                yticks=[],
-                aspect=1,
-                size=5,
-                vmin=0,
-                vmax=1,
-                robust=True,
-                add_labels=False,
-                add_colorbar=False,
-            )
-            g_gray.set_xlabels("")
-            g_gray.set_ylabels("")
-            g_gray.set_titles(f"track_id={tid}, ch={ch_val}")
-
-        results[int(tid)] = normed
-
-    return results
-
-
-
-
-def plot_track_signal_traces(
-    ta_dataset,
-    track_ids,
-    rgb=(1, 1, 1),
-    colors=("#00f670", "#f67000", "#7000f6"),
-    markers=("o", "s", "D"),      # marker per channel
-    marker_size=6,                # <-- NEW: line marker size
-    scatter_size=25,              # <-- NEW: scatter marker area (points^2)
-    markevery=5,                  # <-- NEW: show every Nth marker on lines
-    figsize=(7, 2.8),
-    ylim=None,
-    xlim=None,
-    col_wrap=3,
-    y2=None,                      # channel index for right axis
-    y2lim=None,                   # right-axis limits
-    y2_label=None,                # right-axis label
-    legend_loc="upper right",     # or "outside"
-    show_legend=True
-):
-    """
-    Plot signal traces for a list of track_ids in a subplot grid layout.
-    Optionally place one channel on a secondary (right) y-axis.
-
-    Parameters:
-    - ta_dataset: xarray Dataset with 'signal' variable
-    - track_ids (list[int]): track IDs to plot
-    - rgb (tuple[int,int,int]): e.g., (1, 0, 1) = plot ch 0 and 2 on left axis unless one is y2
-    - colors (list[str]): color for each channel index
-    - figsize (tuple): size of each individual subplot
-    - ylim (tuple or None): y-axis limits for left axis
-    - xlim (tuple or None): x-axis limits for both axes
-    - col_wrap (int): number of subplots per row
-    - y2 (int or None): channel index to draw on right axis
-    - y2lim (tuple or None): y-axis limits for right axis
-    - y2_label (str or None): label for right axis
-    - Each channel can have its own color and marker.
-    - Right y-axis colored to match its channel.
-    - Legend placement: 'upper right', 'lower left', 'outside', etc.
-    - marker_size controls line markers; scatter_size controls mean-point scatter.
-    """
-
-    sig_df = variables_to_df(ta_dataset, ['signal'])
-
-    sns.set_style("whitegrid")
-    sns.set(font_scale=1.1)
-
-    n = len(track_ids)
-    ncols = col_wrap
-    nrows = math.ceil(n / col_wrap)
-
-    fig, axes = plt.subplots(
-        nrows=nrows,
-        ncols=ncols,
-        figsize=(figsize[0] * ncols, figsize[1] * nrows),
-        squeeze=False
-    )
-
-    # Ensure markers covers all channels
-    if len(markers) < len(colors):
-        markers = list(markers) + ["o"] * (len(colors) - len(markers))
-
-    for idx, track_id in enumerate(track_ids):
-        row, col = divmod(idx, col_wrap)
-        ax = axes[row][col]
-        ax2 = ax.twinx() if y2 is not None else None
-
-        # Plot each channel
-        for ch in range(len(colors)):
-            if not ((rgb[ch] == 1) or (y2 == ch)):
-                continue
-
-            color = colors[ch]
-            marker = markers[ch]
-            subset = sig_df[(sig_df['track_id'] == track_id) & (sig_df['ch'] == ch)]
-            if subset.empty:
-                continue
-
-            target_ax = ax2 if (y2 is not None and ch == y2) else ax
-
-            # Line with markers (disable seaborn's auto-legend)
-            sns.lineplot(
-                data=subset, x="t", y="signal", ax=target_ax,
-                color=color, label=f"ch {ch}",
-                lw=2, dashes=False, legend=False,
-                marker=marker, markersize=marker_size, markevery=markevery
-            )
-
-            # Mean points (also not in legend)
-            mean_df = subset.groupby('t')['signal'].mean().reset_index()
-            sns.scatterplot(
-                data=mean_df, x="t", y="signal", ax=target_ax,
-                color=color, s=scatter_size, legend=False
-            )
-
-        # Axis labels and limits
-        ax.set_title(f"Track {int(track_id)}")
-        ax.set_xlabel("time (sec)")
-        ax.set_ylabel("intensity (a.u.)")
-        if ylim: ax.set_ylim(ylim)
-        if xlim: ax.set_xlim(xlim)
-
-        # Right axis styling
-        if ax2 is not None:
-            right_color = colors[y2 % len(colors)]
-            ax2.set_ylabel(y2_label or f"intensity (a.u.) [ch {y2}]", color=right_color)
-            if y2lim: ax2.set_ylim(y2lim)
-            if xlim:  ax2.set_xlim(xlim)
-            ax2.tick_params(axis='y', colors=right_color)
-            ax2.spines['right'].set_color(right_color)
-
-        # One combined legend per subplot
-        if show_legend:
-            h1, l1 = ax.get_legend_handles_labels()
-            h2, l2 = (ax2.get_legend_handles_labels() if ax2 else ([], []))
-            handles, labels = h1 + h2, l1 + l2
-
-            if legend_loc == "outside":
-                ax.legend(handles, labels, loc='upper left',
-                          bbox_to_anchor=(1.15, 1.0),
-                          borderaxespad=0., frameon=True)
-            else:
-                ax.legend(handles, labels, loc=legend_loc, frameon=True)
-        else:
-            if ax.get_legend(): ax.get_legend().remove()
-
-    # Hide unused subplots
-    for idx in range(n, nrows * ncols):
-        row, col = divmod(idx, col_wrap)
-        fig.delaxes(axes[row][col])
-
-    # More room for outside legends
-    if legend_loc == "outside":
-        fig.subplots_adjust(right=0.82)
-
-    plt.tight_layout()
-    plt.show()
-
