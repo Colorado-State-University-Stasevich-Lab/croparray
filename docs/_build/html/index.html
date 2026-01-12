@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>croparray: Module Guide &mdash; croparray 0.0.1 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="#" class="icon icon-home"> croparray
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">croparray: Module Guide</a></li>
+<li><a class="reference internal" href="#indices-and-tables">Indices and tables</a></li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">croparray</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home"></a> &raquo;</li>
+      <li>croparray: Module Guide</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="croparray-module-guide">
+<h1>croparray: Module Guide<a class="headerlink" href="#croparray-module-guide" title="Permalink to this headline"></a></h1>
+<a class="reference internal image-reference" href="_images/Fig1-CropArrayConceptV4.png"><img alt="croparray" src="_images/Fig1-CropArrayConceptV4.png" style="width: 600px;" /></a>
+<span class="target" id="module-src.crop_array_tools"></span><p>Python code to create, manipulate, and analyze an array of crops from TIF images or videos.
+Created: Summer of 2020
+Authors: Tim Stasevich.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="src.crop_array_tools.create_crop_array">
+<span class="sig-prename descclassname"><span class="pre">src.crop_array_tools.</span></span><span class="sig-name descname"><span class="pre">create_crop_array</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">video</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.crop_array_tools.create_crop_array" title="Permalink to this definition"></a></dt>
+<dd><p>Creates a crop x-array from a tif video and a dataframe containing the ids and coordinates of spots of interest. Cropping is only performed in the lateral xy-plane (so each crop has all z-slices in the video). Padding in the xy-plane by zeros is added to create crops for spots that are too close to the edge of the video.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>video</strong> (<em>numpy array</em>) – A 6D numpy array with intensity information from a tif video. The dimensions of the numpy array must be ordered (fov, f, z, y, x, ch), where fov = field of view, f = frame, z = axial z-coordinate, y = lateral y-coordinate, x = lateral x-coordinate, and ch = channels. Note any dimension can have length one (eg. single fov videos would have an fov dimension of length one or a single channel video would have a ch dimension of length one).</p></li>
+<li><p><strong>df</strong> (<em>pandas dataframe</em>) – A dataframe with the ids and coordinates of selected spots for making crops from video. Minimally, the dataframe must have 5 columns (1) ‘fov’: the fov number for each spot; can also be a filename for each fov. (2) ‘id’: the integer id of each spot. (3) ‘f’: integer frame number of each spot. (4) ‘yc’: the lateral y-coordinate of the spot for centering the crop in y, (5) ‘xc’: the lateral x-coodinate of the spot for centering the crop in x. Any additional columns must be numeric and will be automatically converted to individual x-arrays in the crop array dataset that have the column header as a name.</p></li>
+<li><p><strong>xy_pad</strong> (<em>int</em><em>, </em><em>optional</em>) – The amount of pixels to pad the centered pixel for each crop in the lateral x and y directions. Note the centered pixel is defined as the pixel containing the coordinates (xc, yc, zc) for each crop. As an example, if xy_pad = 5, then each crop in the crop array will have x and y dimensions of 11 = 2*xy_pad + 1.</p></li>
+<li><p><strong>dz</strong> (<em>int</em><em>, </em><em>optional</em>) – The size of pixels in the x-direction.</p></li>
+<li><p><strong>dy</strong> (<em>int</em><em>, </em><em>optional</em>) – The size of pixels in the y-direction.</p></li>
+<li><p><strong>dz</strong> – The size of pixels in the z-direction.</p></li>
+<li><p><strong>dt</strong> (<em>int</em><em>, </em><em>optional</em>) – The time between sequential frames in the video.</p></li>
+<li><p><strong>video_filename</strong> (<em>str</em><em>, </em><em>optional</em>) – The name of the tif video file.</p></li>
+<li><p><strong>video_date</strong> (<em>str</em><em>, </em><em>optional</em>) – The date the video was acquired, in the form ‘yyyy-mm-dd’.</p></li>
+<li><p><strong>homography</strong> (<em>numpy array</em><em>, </em><em>optional</em>) – A 3x3 transformation matrix that corrects for the misalignment of channel 0 to the other channels in the video.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>A crop x-array dataset ca (i.e. crop array) containing 9 default x-arrays (+ optional x-arrays based on optional inputted df columns).</em></p></li>
+<li><p><strong>Coordinates of x-array dataset</strong> (<em>fov, n, t, z, y, x, ch</em>) – fov = [0, 1, … n_fov]
+n = [0, 1, … n_crops]
+t = [0, 1, … n_frames] dt
+z = [0, 1, … z_slices] dz
+y = [-xy_pad, xy_pad + 1, … xy_pad] dy
+x = [-xy_pad, xy_pad + 1, … xy_pad] dx
+ch = [0, 1, … n_channels]</p></li>
+<li><p><strong>Attributes of dataset</strong> (<em>filename, date</em>)</p></li>
+<li><p><em>X-arrays in dataset</em></p></li>
+<li><p><strong>1. ca.int – coords</strong> (<em>(fov, n, t, z, y, x ch); attributes: ‘units’; uint16</em>) – An X-array containing the intensities of all crops in the crop array.</p></li>
+<li><p><strong>2. ca.id – coords</strong> (<em>(fov, n, t); attributes: ‘units’; uint16</em>) – An x-array containing the ids of the crops in the video.</p></li>
+<li><p><strong>3. ca.yc – coords</strong> (<em>(fov, n, t, ch); attributes: ‘units’; uint16</em>) – An x-array containing the yc coordinates of the crops in the video.</p></li>
+<li><p><strong>4. ca.xc – coords</strong> (<em>(fov, n, t, ch); attributes: ‘units’; uint16</em>) – An x-array containing the zc coordinates of the crops in the video.</p></li>
+<li><p><strong>5. ca.xy_pad – coords</strong> (<em>(fov, n, t, ch); attributes: ‘units’; uint16</em>) – A 1D array containing xy-pad.</p></li>
+<li><p><strong>6. ca.dt – coords</strong> (<em>(fov, n, t, ch); attributes: ‘units’; float</em>) – A 1D arary containing dt.</p></li>
+<li><p><strong>7. ca.dz – coords</strong> (<em>(fov, n, t, ch), float</em>) – A 1D arary containing dz.</p></li>
+<li><p><strong>9. ca.dy – coords</strong> (<em>(fov, n, t, ch), float</em>) – A 1D arary containing dy.</p></li>
+<li><p><strong>9. ca.dx – coords</strong> (<em>(fov, n, t, ch), float</em>) – A 1D arary containing dx.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<div class="toctree-wrapper compound">
+</div>
+</section>
+<section id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline"></a></h1>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Tim Stasevich.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
