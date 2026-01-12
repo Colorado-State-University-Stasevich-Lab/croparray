@@ -94,17 +94,6 @@ class CropArrayMeasure(_BaseAccessor):
     def signal_raw(self, *args, **kwargs):
         from .measure import measure_signal_raw
         return measure_signal_raw(self.ds, *args, **kwargs)
-    
-    def mask_props(self, *args, **kwargs):
-        """
-        Compute scalar morphology measurements from a binary mask layer across the whole croparray.
-
-        Typical use:
-            ca3.ds = ca3.measure.mask_props(source="ch0_mask_manual",
-                                           props=("area_px","eccentricity","solidity"))
-        """
-        from .measure import measure_mask_props
-        return measure_mask_props(self.ds, *args, **kwargs)
 
 
 @dataclass
