@@ -8,7 +8,10 @@ def track_array(ca, as_object: bool = False):
     Create a track-array dataset from a tracked crop-array dataset by grouping
     entries by unique track IDs (stored in ca['id']).
 
-    Note: In the croparray pipeline, ca['id'] is treated as the active identifier. After tracking, ca['id'] is overwritten to store track IDs (0 indicates untracked / filtered) and the original 'id' is moved to 'spot_id'.
+    This version FIXES the common issue where `fov` becomes a non-index
+    coordinate on `t` (i.e., `fov (t)`), which breaks `.sel(fov=...)` on
+    variables like `best_z`. We enforce `fov` as a true dimension (length 1)
+    per track, under the assumption that each track belongs to exactly one FOV.
 
     Parameters
     ----------
@@ -26,15 +29,7 @@ def track_array(ca, as_object: bool = False):
     # Find all unique (non-zero) track IDs
     my_ids = np.unique(ca["id"].values)
     my_ids = my_ids[my_ids != 0]
-    
-    # ---- Guard: no tracks found ----
-    if len(my_ids) == 0:
-        empty = xr.Dataset()
-        if as_object:
-            from .object import TrackArray
-            return TrackArray(empty)
-        return empty
-    
+
     my_das = []
     for tid in my_ids:
         # Select the group for this track id and convert stacked index -> time index
