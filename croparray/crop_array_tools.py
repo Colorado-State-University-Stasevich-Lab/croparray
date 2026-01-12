@@ -39,7 +39,6 @@ from .trackarray.build import track_array
 from .trackarray.dataframe import create_tracks_df, track_signals_to_df
 from .trackarray.napari_view import display_cell_and_tracks
 from .crop_ops.measure import spot_detect_and_qc
-from .crop_ops.apply import apply_crop_op
 from .raw.detect import detecting_spots
 from .raw.track import tracking_spots
 

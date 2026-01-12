@@ -29,31 +29,9 @@ def spot_detect_and_qc(img, minmass=6000, size=5):
     numpy.ndarray: A new image of the same size as the input image, with a pixel at the location of the feature closest to the center. The pixel value is the signal value of the feature.
 
     """
-    import trackpy as tp
+    import trackypy as tp
     import numpy as np
-    import warnings
-
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message="No maxima survived mass- and size-based filtering.*",
-            category=UserWarning,
-            module=r"trackpy\..*",
-        )
-        warnings.filterwarnings(
-            "ignore",
-            message="All local maxima were in the margins.*",
-            category=UserWarning,
-            module=r"trackpy\..*",
-        )
-        warnings.filterwarnings(
-            "ignore",
-            message="Image is completely black.*",
-            category=UserWarning,
-            module=r"trackpy\..*",
-        )
-        features = tp.locate(img, size, minmass)
-
+    features = tp.locate(img, size, minmass)
     new_img = np.zeros_like(img)
     if len(features) > 0:
         # Calculate the center of the image
